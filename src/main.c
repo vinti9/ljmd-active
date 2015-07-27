@@ -11,12 +11,11 @@
 #include "params.h"
 #include "cell.h"
 
-#define sqr(x) ((x)*(x))
 //#define MEASURE_PRESSURE
 
 //Global function Declarations
 void    initialize();
-void    init_lattice_pos();
+void    init_lattice_pos(int);
 void    init_lattice_vel();
 void    force();
 void    force_nlist();
@@ -24,7 +23,7 @@ void    partforce(int,int);
 void    integrate_euler();
 void    sample();
 void    pbc(int);
-void    write_pos();
+void    write_pos(int);
 void    write_traj();
 void    init_box(double);
 double  gen_gaussian_rand();
@@ -67,6 +66,7 @@ void initialize()
     dummy = fscanf(prm_file,"%s %lf",str,&rot_diff_coeff);
     dummy = fscanf(prm_file,"%s %lf",str,&Fprop);
     dummy = fscanf(prm_file,"%s %d",str,&continu);
+    dummy = fscanf(prm_file,"%s %d",str,&lattice);
     fclose(prm_file);
 
     dsfmt_init_gen_rand(&dsfmt,seed);
@@ -102,7 +102,7 @@ void initialize()
 
     if(continu == 0)
     {
-        init_lattice_pos();
+        init_lattice_pos(lattice);
         printf("Initalized positions\n");
         init_lattice_vel();
         printf("Initialized velocities\n");
@@ -258,7 +258,7 @@ void partforce(int i, int j)
 
 
 
-void init_lattice_pos()
+void init_lattice_pos(int lattice)
 {
     int i=0;
     int ix=0;
@@ -271,17 +271,18 @@ void init_lattice_pos()
     double zgrid = (box.zlen/pow(Npart,0.34));
     printf("%d, %f, %f, %f\n",p,xgrid,ygrid,zgrid);
 
-/* Random positions
-    for (i=0;i<Npart;i++)
+    if (lattice==0)     //Random positions
     {
-
-        particle[i].x = 2*(dsfmt_genrand_open_open(&dsfmt)-0.5)*box.xhalf;
-        particle[i].y = 2*(dsfmt_genrand_open_open(&dsfmt)-0.5)*box.yhalf;
-        particle[i].z = 2*(dsfmt_genrand_open_open(&dsfmt)-0.5)*box.zhalf;
+        for (i=0;i<Npart;i++)
+        {
+    
+            particle[i].x = 2*(dsfmt_genrand_open_open(&dsfmt)-0.5)*box.xhalf;
+            particle[i].y = 2*(dsfmt_genrand_open_open(&dsfmt)-0.5)*box.yhalf;
+            particle[i].z = 2*(dsfmt_genrand_open_open(&dsfmt)-0.5)*box.zhalf;
+        }
     }
-*/
-///*
-//      Positions on a regular cubic lattice
+    else if(lattice ==1)        //Regular simple cubic lattice
+    {
            for (ix=0;(ix*xgrid)<box.xlen;ix++)
            {
                for(iy=0;(iy*ygrid)<box.ylen;iy++)
@@ -298,7 +299,12 @@ void init_lattice_pos()
                    }
                }
            }
-//*/
+    }
+    else
+    {
+        printf("Check Lattice parameter in prm.dat\n");
+        exit(1);
+    }
 
         for(i=0;i<Npart;i++)
         {
@@ -569,6 +575,11 @@ void sample()
 
     }
 
+    if(step%10000 ==0)  //every 10^4 steps
+    {
+        write_pos(1);           //write conf in xyz format
+    }
+
     fprintf (prop_file,"%7d \t%+.3e \t%+.3e \t%+.3e \n",step,(en/Npart),Temp,(pressure[0]+pressure[1]+pressure[2])/3.0);
     
 }
@@ -660,29 +671,44 @@ void read_conf()
 
 
 //Write the coordinates of the particles to a file
-void write_pos()
+void write_pos(int mode)
 {
-    pos_file    = fopen("pos.dat","w");
+    static int save_count = 0;
+    char filename[255];
     int i=0;
-//    fprintf(pos_file,"#Npart%d\n",Npart);
-//    fprintf(pos_file,"#box.x=%.3e, \tbox.y=%.3e, \tbox.z=%.3e, \tbox.xhalf=%.3e, \tbox.yhalf=%.3e, \tbox.zhalf=%.3e\n",box.xlen,box.ylen,box.zlen,box.xhalf,box.yhalf,box.zhalf);
-//    fprintf(pos_file,"#ID,\tx,\ty,\tz,\tvx,\tvy,\tvz,\tfx,\tfy,\tfz\n");
-    for (i=0;i<Npart;i++)
-    {
-        fprintf(pos_file,"%5d \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e\n",i,particle[i].x,particle[i].y,particle[i].z,particle[i].vx,particle[i].vy,particle[i].vz,particle[i].fx,particle[i].fy,particle[i].fz);
-    }
-//    fprintf(pos_file,"#COMvx=%e,\tCOMvy=%e,\tCOMvz=%e\n",sumv[0]/Npart,sumv[1]/Npart,sumv[2]/Npart);
-//    fprintf(pos_file,"\n\nCOMvx=%e,\tCOMvy=%e,\tCOMvz=%e\n",sumv[0],sumv[1],sumv[2]);
-    fclose(pos_file);
 
-//Write particle configuration in standard xyz format
-    FILE *conf_file;
-    conf_file = fopen("pos.xyz","w");
-    for (i=0;i<Npart;i++)
+    if(mode == 0)
     {
-        fprintf(conf_file,"%5d \t%+.3e \t%+.3e \t%+.3e\n",i,particle[i].x,particle[i].y,particle[i].z);
+        pos_file    = fopen("pos.dat","w");
+//        fprintf(pos_file,"#Npart%d\n",Npart);
+//        fprintf(pos_file,"#box.x=%.3e, \tbox.y=%.3e, \tbox.z=%.3e, \tbox.xhalf=%.3e, \tbox.yhalf=%.3e, \tbox.zhalf=%.3e\n",box.xlen,box.ylen,box.zlen,box.xhalf,box.yhalf,box.zhalf);
+//        fprintf(pos_file,"#ID,\tx,\ty,\tz,\tvx,\tvy,\tvz,\tfx,\tfy,\tfz\n");
+        for (i=0;i<Npart;i++)
+        {
+            fprintf(pos_file,"%5d \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e\n",i,particle[i].x,particle[i].y,particle[i].z,particle[i].vx,particle[i].vy,particle[i].vz,particle[i].fx,particle[i].fy,particle[i].fz);
+        }
+//      fprintf(pos_file,"#COMvx=%e,\tCOMvy=%e,\tCOMvz=%e\n",sumv[0]/Npart,sumv[1]/Npart,sumv[2]/Npart);
+//      fprintf(pos_file,"\n\nCOMvx=%e,\tCOMvy=%e,\tCOMvz=%e\n",sumv[0],sumv[1],sumv[2]);
+        fclose(pos_file);
     }
-    fclose(conf_file);
+    else if(mode == 1)
+    {
+
+        //Write particle configuration in standard xyz format
+        sprintf(filename,"pos_%.05i.xyz",save_count++);
+        FILE *conf_file;
+        conf_file = fopen(filename,"w");
+        fprintf(conf_file,"%i\n",Npart);
+        fprintf(conf_file,"%le %le\n",-box.xhalf,box.xhalf);
+        fprintf(conf_file,"%le %le\n",-box.yhalf,box.yhalf);
+        fprintf(conf_file,"%le %le\n",-box.zhalf,box.zhalf);
+
+        for (i=0;i<Npart;i++)
+        {
+            fprintf(conf_file,"%5d \t%+.3e \t%+.3e \t%+.3e\n",i,particle[i].x,particle[i].y,particle[i].z);
+        }
+        fclose(conf_file);
+    }
 
 }
 
@@ -753,7 +779,7 @@ void main()
     printf("End program\n");
 
 
-    write_pos();
+    write_pos(0);       //Save last configuration for continuing the simulation run
     fclose(prop_file);
     fclose(traj_file);
 }

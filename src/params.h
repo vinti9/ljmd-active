@@ -3,6 +3,9 @@
 
 #define MAXNPART 5100
 
+#define sqr(x) ((x)*(x))
+#define cube(x) ((x)*(x)*(x))
+
 //Global variable Declarations
 double  time;
 double  tstep;
@@ -34,6 +37,7 @@ double  avg_press[6];
 double  Av[6];                  //Array storing average values of properties
 
 int     continu;                //parameter indicating a continuing simulation run or starting fresh
+int     lattice;                //parameter indicating type of lattice(random/cubic/bcc...etc) for initialization
 
 //Variables for brownian dynamics
 double  friction_coeff;                  //friction coefficient
