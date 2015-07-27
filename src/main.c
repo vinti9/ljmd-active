@@ -417,10 +417,10 @@ void integrate_euler()
         r2 = gen_gaussian_rand();
         r3 = gen_gaussian_rand();
 //        rr = sqrt(r1*r1 + r2*r2 + r3*r3);
-        rri = 1.0/sqrt(r1*r1 + r2*r2 + r3*r3);
-        r1 = r1*rri;
-        r2 = r1*rri;
-        r3 = r1*rri;
+//        rri = 1.0/sqrt(r1*r1 + r2*r2 + r3*r3);
+//        r1 = r1*rri;
+//        r2 = r1*rri;
+//        r3 = r1*rri;
 //        vxnew = C3*vv*r1*rri*sqrt_tstep;
 //        vynew = C3*vv*r2*rri*sqrt_tstep;
 //        vznew = C3*vv*r3*rri*sqrt_tstep;
