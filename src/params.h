@@ -1,5 +1,6 @@
 
 #define USE_NLIST       //Switch to use neighbor list 
+#define MEASURE_RDF     //Switch to enable RDF measurement 
 
 #define MAXNPART 5100
 
@@ -45,6 +46,7 @@ double  C1;                     //factor for force term of Langevin equation
 double  C2;                     //factor for brownian term of Langevin equation
 double  C3;                     //factor for velocity propagation for rotational diffusion
 double  sqrt_tstep;
+
 
 
 //Structure for Particles

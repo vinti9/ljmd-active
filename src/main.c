@@ -10,6 +10,7 @@
 #include "dSFMT.h"      //for Random Number generator
 #include "params.h"
 #include "cell.h"
+#include "gr.h"
 
 //#define MEASURE_PRESSURE
 
@@ -129,6 +130,9 @@ void initialize()
     {
         avg_press[p] = 0.0;
     }
+
+    //Initialize RDF parameters
+    rdf(0);
   
 }
 
@@ -250,8 +254,21 @@ void partforce(int i, int j)
         pressure[5] = pressure[5] + ff*zr*xr;   //Pzx
 #endif 
 
+#ifdef MEASURE_RDF
+        if (step%1000 == 0)     //Every 1000 steps, measure rdf
+        {
+            r = sqrt(r2);
+            if (r<box.xhalf)
+            {
+                g[(int)(r/delg)] += 2;
+            }
+        }
+#endif
+
         //Update the system potential energy
         en = en + 4*epsilon*beta*r6i*(r6i-1) - ecut;
+//Intentional mistake below to match system values with Vassilis' code
+//        en = en + 4*epsilon*beta*r6i*(r6i-1) + ecut;
 
     }
 }
@@ -431,12 +448,27 @@ void integrate_euler()
 //        vynew = C3*vv*r2*rri*sqrt_tstep;
 //        vznew = C3*vv*r3*rri*sqrt_tstep;
 
-        vxnew = C3*(particle[i].vy*r3-particle[i].vz*r2)*sqrt_tstep;          //direction update
-        vynew = C3*(particle[i].vz*r1-particle[i].vx*r3)*sqrt_tstep;          //direction update
-        vznew = C3*(particle[i].vx*r2-particle[i].vy*r1)*sqrt_tstep;          //direction update
+        vxnew = particle[i].vx + C3*(particle[i].vy*r3-particle[i].vz*r2)*sqrt_tstep;          //direction update
+        vynew = particle[i].vy + C3*(particle[i].vz*r1-particle[i].vx*r3)*sqrt_tstep;          //direction update
+        vznew = particle[i].vz + C3*(particle[i].vx*r2-particle[i].vy*r1)*sqrt_tstep;          //direction update
         vv = sqrt(vxnew*vxnew + vynew*vynew + vznew*vznew);
-        vvi = 1.0/vv;
+        vvi = (vv>0) ? 1.0/vv : 0;
 
+        vxnew = vxnew*vvi;                          //make unit vector
+        vynew = vynew*vvi;                          //make unit vector
+        vznew = vznew*vvi;                          //make unit vector
+
+/*        
+        vxnew = (particle[i].vy*r3-particle[i].vz*r2);          //direction update
+        vynew = (particle[i].vz*r1-particle[i].vx*r3);          //direction update
+        vznew = (particle[i].vx*r2-particle[i].vy*r1);          //direction update
+        vv = sqrt(vxnew*vxnew + vynew*vynew + vznew*vznew);
+        vvi = (vv>0) ? 1.0/vv : 0;
+
+        vxnew = C3*sqrt_tstep*vxnew*vvi;                          //make unit vector
+        vynew = C3*sqrt_tstep*vynew*vvi;                          //make unit vector
+        vznew = C3*sqrt_tstep*vznew*vvi;                          //make unit vector
+*/
         //Update the positions and velocity
 //        particle[i].xold = particle[i].x;
 //        particle[i].yold = particle[i].y;
@@ -445,9 +477,9 @@ void integrate_euler()
         particle[i].y = ynew;
         particle[i].z = znew;
         pbc(i);
-        particle[i].vx = vxnew*vvi;                          //make unit vector & update
-        particle[i].vy = vynew*vvi;                          //make unit vector & update
-        particle[i].vz = vznew*vvi;                          //make unit vector & update
+        particle[i].vx = vxnew;
+        particle[i].vy = vynew;
+        particle[i].vz = vznew;
        
 /*
         //Update system velocity and Kinetic energy
@@ -574,6 +606,13 @@ void sample()
 #endif
 
     }
+
+#ifdef MEASURE_RDF
+    if(step%1000 == 0)
+    {
+        ngr +=1;
+    }
+#endif
 
     if(step%10000 ==0)  //every 10^4 steps
     {
@@ -779,6 +818,7 @@ void main()
     printf("End program\n");
 
 
+    rdf(2);             //Save RDF values
     write_pos(0);       //Save last configuration for continuing the simulation run
     fclose(prop_file);
     fclose(traj_file);
