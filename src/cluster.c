@@ -28,7 +28,8 @@ void rdf(int mode)
     if (mode==0)
     {
         nbin_gr = 200;          //100 bins used for RDF evaluation
-        delg = max(box.xlen,box.ylen,box.zlen)/nbin_gr;
+        delg = max(box.xhalf,box.yhalf,box.zhalf)/nbin_gr;
+//        delg = 0.02;
         for (i=0; i<nbin_gr; i++)
         {
             g[i] = 0;

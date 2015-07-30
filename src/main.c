@@ -254,23 +254,24 @@ void partforce(int i, int j)
         pressure[5] = pressure[5] + ff*zr*xr;   //Pzx
 #endif 
 
-#ifdef MEASURE_RDF
-        if (step%1000 == 0)     //Every 1000 steps, measure rdf
-        {
-            r = sqrt(r2);
-            if (r<box.xhalf)
-            {
-                g[(int)(r/delg)] += 2;
-            }
-        }
-#endif
-
         //Update the system potential energy
         en = en + 4*epsilon*beta*r6i*(r6i-1) - ecut;
 //Intentional mistake below to match system values with Vassilis' code
 //        en = en + 4*epsilon*beta*r6i*(r6i-1) + ecut;
 
     }
+
+#ifdef MEASURE_RDF
+    if (step%1000 == 0)     //Every 1000 steps, measure rdf
+    {
+        r = sqrt(r2);
+        if (r<box.xhalf)
+        {
+            g[(int)(r/delg)] += 2;
+        }
+    }
+#endif
+
 }
 
 
