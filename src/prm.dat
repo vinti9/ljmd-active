@@ -1,0 +1,15 @@
+#seed=      12345
+#nsteps_eq= 0
+#nsteps=    1000
+#tstep=     0.00003
+#Npart=     1728
+#rcut=      2.5
+#initTemp=  1.0
+#density=   0.191
+#beta=      1.0
+#friction=  1.0
+#epsilon=   12.5
+#rot_diff=  0.6
+#Fprop=     50.0
+#continu?   1
+#lattice    0

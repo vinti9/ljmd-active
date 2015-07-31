@@ -11,6 +11,7 @@
 #include "params.h"
 #include "cell.h"
 #include "gr.h"
+#include "lattice.h"
 
 //Global function Declarations
 void    initialize();
@@ -25,15 +26,16 @@ void    pbc(int);
 void    write_pos(int);
 void    write_traj();
 void    init_box(double);
+void    init_box_cuboid(double, double, double);
 double  gen_gaussian_rand();
 void    write_pressure();
 void    read_conf();
         
 
 //Global Structure declarations
-
-//cells_t     *cells;
 dsfmt_t     dsfmt;
+//cells_t     *cells;
+
 
 //Global File pointers
 FILE *prm_file;
@@ -49,6 +51,7 @@ void initialize()
     int p;
     int seed;
     char str[30];
+    double Lx,Ly,Lz; 
     
     prm_file = fopen("prm.dat","r");
     dummy = fscanf(prm_file,"%s %d",str,&seed);
@@ -66,6 +69,7 @@ void initialize()
     dummy = fscanf(prm_file,"%s %lf",str,&Fprop);
     dummy = fscanf(prm_file,"%s %d",str,&continu);
     dummy = fscanf(prm_file,"%s %d",str,&lattice);
+    dummy = fscanf(prm_file,"%s %lf %lf %lf",str,&Lx,&Ly,&Lz);
     fclose(prm_file);
 
     dsfmt_init_gen_rand(&dsfmt,seed);
@@ -79,8 +83,16 @@ void initialize()
     
     etot = 0.0;
     en = 0.0;
-    init_box(density);
-
+    if ( (Lx>0.0) && (Ly>0.0) && (Lz>0.0))
+    {
+        init_box_cuboid(Lx,Ly,Lz);
+        printf("Cuboidal simulation box ! \n");
+    }
+    else
+    {
+        init_box(density);    
+    }
+    
 //Variables for brownian dynamics
     C1 = 1.0/friction_coeff;
     sqrt_tstep = sqrt(tstep);
@@ -101,7 +113,9 @@ void initialize()
 
     if(continu == 0)
     {
-        init_lattice_pos(lattice);
+//        init_lattice_pos(lattice);
+        double zslab = (Npart/density)/(box.xlen*box.ylen);
+        init_lattice_slab(lattice, -box.xhalf, -box.yhalf, -zslab/2.0, box.xlen, box.ylen, zslab);
         printf("Initalized positions\n");
         init_lattice_vel();
         printf("Initialized velocities\n");
@@ -128,7 +142,13 @@ void initialize()
     {
         avg_press[p] = 0.0;
     }
-
+    
+    //initialize running averages to zero
+    for(p=0;p<6;p++)
+    {
+        Av[p]=0;
+    }
+        
     //Initialize RDF parameters
     rdf(0);
   
@@ -405,6 +425,24 @@ void init_box(double rho)
     printf("Simulation Box: Xlen=%.3e, Ylen=%.3e, Zlen=%.3e\n",box.xlen,box.ylen,box.zlen);
 }
 
+//Initialize box dimensions (each length wise)
+void init_box_cuboid(double lx, double ly, double lz)
+{
+    box.xlen = lx;
+    box.ylen = ly;
+    box.zlen = lz;
+    box.xhalf = box.xlen*0.5;
+    box.yhalf = box.ylen*0.5;
+    box.zhalf = box.zlen*0.5;
+    box.xleni = 1.0/box.xlen;
+    box.yleni = 1.0/box.ylen;
+    box.zleni = 1.0/box.zlen;
+    volume = box.xlen*box.ylen*box.zlen;
+    volumei = 1.0/volume;
+
+    printf("Simulation Box: Xlen=%.3e, Ylen=%.3e, Zlen=%.3e\n",box.xlen,box.ylen,box.zlen);
+}
+
 //Integrate the equations using the Euler-Maruyama scheme
 void integrate_euler()
 {
@@ -591,13 +629,17 @@ void sample()
     Av[1] += (etot/Npart);
     Av[2] += Temp;
     Av[3] += (pressure[0] + pressure[1] + pressure[2])/3.0;
-    Av[5] += 1;
+    Av[5] += 1;             //Counter for running average
 
     //Print out the current average every 100 steps
     if(step%100 == 0)
     {
-        printf ("%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e \tCOMv= %+.3e\n",step,Av[0]/step,Av[1]/step,Av[2]/step,(sumv[0]+sumv[1]+sumv[2])/Npart);
-        Av[5] = 0;
+//        printf ("%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e \tCOMv= %+.3e\n",step,Av[0]/step,Av[1]/step,Av[2]/step,(sumv[0]+sumv[1]+sumv[2])/Npart);
+        printf ("%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e \tCOMv= %+.3e\n",step,Av[0]/Av[5],Av[1]/Av[5],Av[2]/Av[5],(sumv[0]+sumv[1]+sumv[2])/Npart);
+        for(i=0;i<6;i++)
+        {
+            Av[i]=0;
+        }
         write_traj(0); //Write trajectory of particle 0
 #ifdef MEASURE_PRESSURE
         //Write pressure tensor to file;
@@ -779,7 +821,6 @@ void main()
     printf("Begin Initialization\n");
     initialize();
     printf("Initialized\n");
-//    printf("%e",fmod(3.018,3.000));
     printf("Density=%.3f\n",density);
     printf("xmin=%.3f, xmax=%.3f, ymin=%.3f, ymax=%.3f, zmin=%.3f, zmax=%.3f\n",-box.xhalf,box.xhalf,-box.yhalf,box.yhalf,-box.zhalf,box.zhalf);
     printf("beta=%.3f\n",beta);
