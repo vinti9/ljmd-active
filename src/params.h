@@ -1,6 +1,7 @@
 
 #define USE_NLIST       //Switch to use neighbor list 
 #define MEASURE_RDF     //Switch to enable RDF measurement 
+#define MEASURE_PRESSURE     //Switch to enable Pressure measurement 
 
 #define MAXNPART 5100
 

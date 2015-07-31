@@ -12,8 +12,6 @@
 #include "cell.h"
 #include "gr.h"
 
-//#define MEASURE_PRESSURE
-
 //Global function Declarations
 void    initialize();
 void    init_lattice_pos(int);
@@ -626,8 +624,15 @@ void sample()
 
 void write_pressure()
 {
+    int p = 0;
     double Pr = (avg_press[0] + avg_press[1] + avg_press[2])/3.0;
     fprintf(press_file,"%+.3e %+.3e %+.3e %+.3e %+.3e %+.3e %+.3e\n",Pr/step, avg_press[0]/step,avg_press[1]/step,avg_press[2]/step,avg_press[3]/step,avg_press[4]/step,avg_press[5]/step);
+    
+    //Reinitialize avg_stress tensor to 0.0 to measure avg. of only last 's' steps
+    for (p =0; p<6; p++)
+    {
+        avg_press[p] = 0.0;
+    }
 }
 
 //function to put particle in the periodic simulation box
@@ -738,10 +743,10 @@ void write_pos(int mode)
         sprintf(filename,"pos_%.05i.xyz",save_count++);
         FILE *conf_file;
         conf_file = fopen(filename,"w");
-        fprintf(conf_file,"%i\n",Npart);
-        fprintf(conf_file,"%le %le\n",-box.xhalf,box.xhalf);
-        fprintf(conf_file,"%le %le\n",-box.yhalf,box.yhalf);
-        fprintf(conf_file,"%le %le\n",-box.zhalf,box.zhalf);
+//        fprintf(conf_file,"%i\n",Npart);
+//        fprintf(conf_file,"%le %le\n",-box.xhalf,box.xhalf);
+//        fprintf(conf_file,"%le %le\n",-box.yhalf,box.yhalf);
+//       fprintf(conf_file,"%le %le\n",-box.zhalf,box.zhalf);
 
         for (i=0;i<Npart;i++)
         {
