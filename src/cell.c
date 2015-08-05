@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "zbin.h"
 
 
 
@@ -108,6 +109,7 @@ void move2cell(int i)
     cells[c_new].particles[cells[c_new].n]=i;			
     cells[c_new].n++;					
     particle[i].cell = c_new;
-  }							
+  }
+  move2zbin(i);
 }
 

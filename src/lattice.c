@@ -21,8 +21,20 @@ void init_lattice_slab(int lattice, double x0, double y0, double z0, double xlen
     double ygrid = xgrid;
     double zgrid = xgrid;
     printf("%d, xgrid=%f, ygrid=%f, zgrid=%f\n",p,xgrid,ygrid,zgrid);
+    dsfmt_t dsfmt;
+    dsfmt_init_gen_rand(&dsfmt,12345);
 
-    if(lattice ==1)        //Regular simple cubic lattice as per slab requirement
+    if (lattice==0)     //Random positions
+    {
+        for (i=0;i<Npart;i++)
+        {
+    
+            particle[i].x = x0 + dsfmt_genrand_open_open(&dsfmt)*xlen;
+            particle[i].y = y0 + dsfmt_genrand_open_open(&dsfmt)*ylen;
+            particle[i].z = z0 + dsfmt_genrand_open_open(&dsfmt)*zlen;
+        }
+    }
+    else if(lattice ==1)        //Regular simple cubic lattice as per slab requirement
     {
            i = 0;
            for (iz=0;(iz*zgrid)<zlen;iz++)
@@ -43,6 +55,27 @@ void init_lattice_slab(int lattice, double x0, double y0, double z0, double xlen
                }
            }
     }
+    //else if(lattice == 2)      //Regular FCC lattice as per slab requirement
+    //{
+    //       i = 0;
+    //       for (iz=0;(iz*zgrid)<zlen;iz++)
+    //       {
+    //           for(ix=0;(ix*xgrid)<xlen;ix++)
+    //           {
+    //               for(iy=0;(iy*ygrid<ylen);iy++)
+    //               { 
+    //                   //i = iz*p*p + ix*p + iy;
+    //                   if (i<Npart)
+    //                   {
+    //                       particle[i].x = x0 + (ix+0.5)*xgrid;
+    //                       particle[i].y = y0 + (iy+0.5)*ygrid;
+    //                       particle[i].z = z0 + (iz+0.5)*zgrid;
+    //                       i = i+1;
+    //                   }
+    //               }
+    //           }
+    //       }
+    //}
     else
     {
         printf("Check Lattice parameter in prm.dat\n");
@@ -58,13 +91,13 @@ void init_lattice_slab(int lattice, double x0, double y0, double z0, double xlen
         exit(1);
     }
 
-        for(i=0;i<Npart;i++)
-        {
-            //Initialize variables with dummy values
-            particle[i].xold = particle[i].x;
-            particle[i].yold = particle[i].y;
-            particle[i].zold = particle[i].z;
-        }
+    for(i=0;i<Npart;i++)
+    {
+        //Initialize variables with dummy values
+        particle[i].xold = particle[i].x;
+        particle[i].yold = particle[i].y;
+        particle[i].zold = particle[i].z;
+    }
     
     i=0;
     FILE *fplattice;

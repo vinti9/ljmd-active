@@ -12,6 +12,7 @@
 #include "cell.h"
 #include "gr.h"
 #include "lattice.h"
+#include "zbin.h"
 
 //Global function Declarations
 void    initialize();
@@ -133,6 +134,8 @@ void initialize()
     init_cells();           //Initialize cell list
 #endif
 
+    init_zbins();           //Initialize zbin profiles
+
     
     ecut = 4*beta*epsilon*(1.0/(pow(rcut,12))-1.0/(pow(rcut,6)));        //calculate ecut
     printf("ecut=%e\n",ecut);
@@ -184,8 +187,12 @@ void force()
 //Force calculation using neighbor list
 void force_nlist()
 {
-    int i,j;
-    int p,q,c,icell,inbr;
+    int i = 0;
+    int j = 0;
+    int p = 0;
+    int q = 0;
+    int c = 0;
+    int icell,inbr;
     int s;
 
     for(i=0;i<Npart;i++) //Initialize forces to zero
@@ -199,8 +206,17 @@ void force_nlist()
     {
         pressure[s]=0.0;
     }
+    
+    for(p=0; p<nzbin; p++)
+    {
+        for(q=0; q<6; q++)
+        {
+            press_z[p][q] = 0.0;
+//            avg_press_z[p][q] = 0.0;
+        }
+    }    
 
-    en = 0.0;           //Initialize potential energy to zero
+    en = 0.0;           //Initialize potential energy to zero for the MD step
 
     for(i=0;i<Npart;i++)
     {
@@ -236,6 +252,7 @@ void partforce(int i, int j)
     double r6i = 0.0;
     double ff = 0.0;
     double virial = 0.0;
+    int    ibin,jbin,p;
 
 
     xr = particle[i].x-particle[j].x;
@@ -252,7 +269,7 @@ void partforce(int i, int j)
     {
         r2i = 1/r2;      
         r6i = r2i*r2i*r2i;
-        ff = epsilon*48.0*r2i*r6i*(r6i-0.5);
+        ff = epsilon*48.0*r2i*r6i*(r6i-0.5);        // = (1/r)*(dU/dr)
 
         //Update the forces
         particle[i].fx=particle[i].fx+ff*xr;
@@ -263,13 +280,53 @@ void partforce(int i, int j)
         particle[j].fz=particle[j].fz-ff*zr;
 
 #ifdef MEASURE_PRESSURE 
-        //Update the stress tensor components
-        pressure[0] = pressure[0] + ff*xr*xr;   //Pxx
-        pressure[1] = pressure[1] + ff*yr*yr;   //Pyy
-        pressure[2] = pressure[2] + ff*zr*zr;   //Pzz
-        pressure[3] = pressure[3] + ff*xr*yr;   //Pxy
-        pressure[4] = pressure[4] + ff*yr*zr;   //Pyz
-        pressure[5] = pressure[5] + ff*zr*xr;   //Pzx
+        if (mode == 1)
+        {
+            //Update the stress tensor components
+            pressure[0] = pressure[0] + ff*xr*xr;   //Pxx
+            pressure[1] = pressure[1] + ff*yr*yr;   //Pyy
+            pressure[2] = pressure[2] + ff*zr*zr;   //Pzz
+            pressure[3] = pressure[3] + ff*xr*yr;   //Pxy
+            pressure[4] = pressure[4] + ff*yr*zr;   //Pyz
+            pressure[5] = pressure[5] + ff*zr*xr;   //Pzx
+              
+            if(step%100 == 0)
+            {
+                //Pressure profile along z direction
+                ibin = particle[i].zbin;
+                jbin = particle[j].zbin;
+                if(ibin == jbin)
+                {
+                    //for(p=0;p<6;p++)
+                    //{
+                    //    press_z[ibin][p] = press_z[ibin][p] + pressure[p];
+                    //}
+                }
+                else
+                {
+                    for(p=0;p<6;p++)
+                    {   
+                        //press_z[ibin][p] = press_z[ibin][p] + pressure[p]/2;
+                        //press_z[jbin][p] = press_z[jbin][p] + pressure[p]/2;
+                        press_z[ibin][0] = press_z[ibin][0] + ff*xr*xr;   //Pxx
+                        press_z[ibin][1] = press_z[ibin][1] + ff*yr*yr;   //Pyy
+                        press_z[ibin][2] = press_z[ibin][2] + ff*zr*zr;   //Pzz
+                        press_z[ibin][3] = press_z[ibin][3] + ff*xr*yr;   //Pxy
+                        press_z[ibin][4] = press_z[ibin][4] + ff*yr*zr;   //Pyz
+                        press_z[ibin][5] = press_z[ibin][5] + ff*zr*xr;   //Pzx
+                        
+                        press_z[jbin][0] = press_z[jbin][0] - ff*xr*xr;   //Pxx
+                        press_z[jbin][1] = press_z[jbin][1] - ff*yr*yr;   //Pyy
+                        press_z[jbin][2] = press_z[jbin][2] - ff*zr*zr;   //Pzz
+                        press_z[jbin][3] = press_z[jbin][3] - ff*xr*yr;   //Pxy
+                        press_z[jbin][4] = press_z[jbin][4] - ff*yr*zr;   //Pyz
+                        press_z[jbin][5] = press_z[jbin][5] - ff*zr*xr;   //Pzx
+          
+                    }
+                }
+            }
+        }
+      
 #endif 
 
         //Update the system potential energy
@@ -280,12 +337,15 @@ void partforce(int i, int j)
     }
 
 #ifdef MEASURE_RDF
-    if (step%1000 == 0)     //Every 1000 steps, measure rdf
+    if (mode == 1)
     {
-        r = sqrt(r2);
-        if (r<box.xhalf)
+        if (step%1000 == 0)     //Every 1000 steps, measure rdf
         {
-            g[(int)(r/delg)] += 2;
+            r = sqrt(r2);
+            if (r<box.xhalf)
+            {
+                g[(int)(r/delg)] += 2;
+            }
         }
     }
 #endif
@@ -457,6 +517,7 @@ void integrate_euler()
     double r1,r2,r3,rr,rri;
     sumv[0]=0;sumv[1]=0;sumv[2]=0;
     sumv2[0]=0;sumv2[1]=0;sumv2[2]=0;
+    int p,q;
 
     for (i=0; i<Npart ; i++)
     {
@@ -467,23 +528,10 @@ void integrate_euler()
         ynew = particle[i].y + C1*(particle[i].fy + Fprop*particle[i].vy)*tstep + C2*gen_gaussian_rand()*sqrt_tstep;
         znew = particle[i].z + C1*(particle[i].fz + Fprop*particle[i].vz)*tstep + C2*gen_gaussian_rand()*sqrt_tstep;
 
-/* 
-        vxnew = (xnew - particle[i].x)*tstepi;
-        vynew = (ynew - particle[i].y)*tstepi;
-        vznew = (znew - particle[i].z)*tstepi;
-*/
-
+/* disable for passive system testing
         r1 = gen_gaussian_rand();
         r2 = gen_gaussian_rand();
         r3 = gen_gaussian_rand();
-//        rr = sqrt(r1*r1 + r2*r2 + r3*r3);
-//        rri = 1.0/sqrt(r1*r1 + r2*r2 + r3*r3);
-//        r1 = r1*rri;
-//        r2 = r1*rri;
-//        r3 = r1*rri;
-//        vxnew = C3*vv*r1*rri*sqrt_tstep;
-//        vynew = C3*vv*r2*rri*sqrt_tstep;
-//        vznew = C3*vv*r3*rri*sqrt_tstep;
 
         vxnew = particle[i].vx + C3*(particle[i].vy*r3-particle[i].vz*r2)*sqrt_tstep;          //direction update
         vynew = particle[i].vy + C3*(particle[i].vz*r1-particle[i].vx*r3)*sqrt_tstep;          //direction update
@@ -494,53 +542,39 @@ void integrate_euler()
         vxnew = vxnew*vvi;                          //make unit vector
         vynew = vynew*vvi;                          //make unit vector
         vznew = vznew*vvi;                          //make unit vector
-
-/*        
-        vxnew = (particle[i].vy*r3-particle[i].vz*r2);          //direction update
-        vynew = (particle[i].vz*r1-particle[i].vx*r3);          //direction update
-        vznew = (particle[i].vx*r2-particle[i].vy*r1);          //direction update
-        vv = sqrt(vxnew*vxnew + vynew*vynew + vznew*vznew);
-        vvi = (vv>0) ? 1.0/vv : 0;
-
-        vxnew = C3*sqrt_tstep*vxnew*vvi;                          //make unit vector
-        vynew = C3*sqrt_tstep*vynew*vvi;                          //make unit vector
-        vznew = C3*sqrt_tstep*vznew*vvi;                          //make unit vector
 */
-        //Update the positions and velocity
-//        particle[i].xold = particle[i].x;
-//        particle[i].yold = particle[i].y;
-//        particle[i].zold = particle[i].z;
         particle[i].x = xnew;
         particle[i].y = ynew;
         particle[i].z = znew;
         pbc(i);
-        particle[i].vx = vxnew;
-        particle[i].vy = vynew;
-        particle[i].vz = vznew;
-       
-/*
-        //Update system velocity and Kinetic energy
-        sumv[0] += vxnew;
-        sumv[1] += vynew;
-        sumv[2] += vznew;
-        sumv2[0] += vxnew*vxnew;
-        sumv2[1] += vynew*vynew;
-        sumv2[2] += vznew*vznew;
-*/
-        //Update Total Energy & Temp
-        etot = (en + 0.5*(sumv2[0]+sumv2[1]+sumv2[2]));
-        Temp = (sumv2[0]+sumv2[1]+sumv2[2])/(3*Npart);
+    }
+    
+    //Update Total Energy & Temp
+    etot = (en + 0.5*(sumv2[0]+sumv2[1]+sumv2[2]));
+    Temp = (sumv2[0]+sumv2[1]+sumv2[2])/(3*Npart);
 
 #ifdef MEASURE_PRESSURE    
-        // Pressure as per virial equation
-        for (s=0; s<6; s++)
-        {   
-            pressure[s] = (Npart*Temp + pressure[s])*volumei ;
-            avg_press[s] = avg_press[s] + pressure[s];
-        }
-#endif
-
+    // Pressure as per virial equation
+    for (s=0; s<6; s++)
+    {   
+        pressure[s] = (Npart*Temp + pressure[s])*volumei ;
+        avg_press[s] = avg_press[s] + pressure[s];
     }
+    
+    //Pressure profile in z-direction
+    if(step%100 == 0)
+    {
+        for(p=0; p<nzbin; p++)
+        {
+            for(q=0; q<6; q++)
+            {
+                press_z[p][q] = (Npart*Temp + press_z[p][q])*vzbini;
+                avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
+            }
+        }
+        //measure_press_z();
+    }
+#endif
     
 }
 
@@ -556,6 +590,7 @@ void integrate()
     double vznew=0;
     sumv[0]=0;sumv[1]=0;sumv[2]=0;
     sumv2[0]=0;sumv2[1]=0;sumv2[2]=0;
+    int p,q;
 
     for (i=0; i<Npart ; i++)
     {
@@ -600,20 +635,34 @@ void integrate()
         sumv2[0] += vxnew*vxnew;
         sumv2[1] += vynew*vynew;
         sumv2[2] += vznew*vznew;
-
-        //Update Total Energy & Temp
-        etot = (en + 0.5*(sumv2[0]+sumv2[1]+sumv2[2]));
-        Temp = (sumv2[0]+sumv2[1]+sumv2[2])/(3*Npart);
+    }
+    //Update Total Energy & Temp
+    etot = (en + 0.5*(sumv2[0]+sumv2[1]+sumv2[2]));
+    Temp = (sumv2[0]+sumv2[1]+sumv2[2])/(3*Npart);
 
 #ifdef MEASURE_PRESSURE        
-        // Pressure as per virial equation
-        for (s=0; s<6; s++)
-        {   
-            pressure[s] = (Npart*Temp + pressure[s])/volume ;
-            avg_press[s] = avg_press[s] + pressure[s];
-        }
-#endif
+    // Pressure as per virial equation
+    for (s=0; s<6; s++)
+    {   
+        pressure[s] = (Npart*Temp + pressure[s])/volume ;
+        avg_press[s] = avg_press[s] + pressure[s];
     }
+        
+    if(step%100 == 0)
+    {
+        //Pressure profile in z-direction
+        for(p=0; p<nzbin; p++)
+        {
+            for(q=0; q<6; q++)
+            {
+                press_z[p][q] = (Npart*Temp + press_z[p][q])*vzbini;
+                avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
+            }
+        }
+        //measure_press_z();
+    }
+#endif
+
 
 }
 
@@ -628,24 +677,26 @@ void sample()
     Av[0] += (en/Npart);
     Av[1] += (etot/Npart);
     Av[2] += Temp;
-    Av[3] += (pressure[0] + pressure[1] + pressure[2])/3.0;
+//    Av[3] += (pressure[0] + pressure[1] + pressure[2])/3.0;
+    Av[3] += (avg_press[0]+avg_press[1]+avg_press[2])/step/3.0;
     Av[5] += 1;             //Counter for running average
 
     //Print out the current average every 100 steps
     if(step%100 == 0)
     {
 //        printf ("%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e \tCOMv= %+.3e\n",step,Av[0]/step,Av[1]/step,Av[2]/step,(sumv[0]+sumv[1]+sumv[2])/Npart);
-        printf ("%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e \tCOMv= %+.3e\n",step,Av[0]/Av[5],Av[1]/Av[5],Av[2]/Av[5],(sumv[0]+sumv[1]+sumv[2])/Npart);
+        printf ("%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e Pr= %.3e \tCOMv= %+.3e\n",step,Av[0]/Av[5],Av[1]/Av[5],Av[2]/Av[5], Av[3]/Av[5],(sumv[0]+sumv[1]+sumv[2])/Npart);
         for(i=0;i<6;i++)
         {
             Av[i]=0;
         }
         write_traj(0); //Write trajectory of particle 0
+        measure_rho_z();
 #ifdef MEASURE_PRESSURE
         //Write pressure tensor to file;
         write_pressure();
+//        measure_press_z();
 #endif
-
     }
 
 #ifdef MEASURE_RDF
@@ -743,9 +794,9 @@ void read_conf()
     double d1,d2,d3;
     FILE *fp;
     fp = fopen("pos.dat","r");   
-    while(dummy!=EOF && i<Npart)
+    while(j<Npart && i<Npart)
     {
-        dummy = fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf",&i,&particle[j].x,&particle[j].y,&particle[j].z,&particle[j].vx,&particle[j].vy,&particle[j].vz,&d1,&d2,&d3);
+        dummy = fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf",&i,&particle[j].x,&particle[j].y,&particle[j].z,&particle[j].vx,&particle[j].vy,&particle[j].vz,&particle[i].xold,&particle[i].yold,&particle[i].zold);
         j += 1;
     }
     if(i>Npart || j!=Npart)
@@ -753,6 +804,15 @@ void read_conf()
         printf("Error!: check conf file & Npart,id=%d, j=%d\n",i,j);
     }
     fclose(fp);
+    
+    //for(i=0;i<Npart;i++)
+    //{
+    //    //Initialize variables with dummy values
+    //    particle[i].xold = particle[i].x;
+    //    particle[i].yold = particle[i].y;
+    //    particle[i].zold = particle[i].z;
+    //}
+    
 }
 
 
@@ -772,7 +832,7 @@ void write_pos(int mode)
 //        fprintf(pos_file,"#ID,\tx,\ty,\tz,\tvx,\tvy,\tvz,\tfx,\tfy,\tfz\n");
         for (i=0;i<Npart;i++)
         {
-            fprintf(pos_file,"%5d \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e \t%+.3e\n",i,particle[i].x,particle[i].y,particle[i].z,particle[i].vx,particle[i].vy,particle[i].vz,particle[i].fx,particle[i].fy,particle[i].fz);
+            fprintf(pos_file,"%5d \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e\n",i,particle[i].x,particle[i].y,particle[i].z,particle[i].vx,particle[i].vy,particle[i].vz,particle[i].xold,particle[i].yold,particle[i].zold);
         }
 //      fprintf(pos_file,"#COMvx=%e,\tCOMvy=%e,\tCOMvz=%e\n",sumv[0]/Npart,sumv[1]/Npart,sumv[2]/Npart);
 //      fprintf(pos_file,"\n\nCOMvx=%e,\tCOMvy=%e,\tCOMvz=%e\n",sumv[0],sumv[1],sumv[2]);
@@ -785,10 +845,10 @@ void write_pos(int mode)
         sprintf(filename,"pos_%.05i.xyz",save_count++);
         FILE *conf_file;
         conf_file = fopen(filename,"w");
-//        fprintf(conf_file,"%i\n",Npart);
-//        fprintf(conf_file,"%le %le\n",-box.xhalf,box.xhalf);
-//        fprintf(conf_file,"%le %le\n",-box.yhalf,box.yhalf);
-//       fprintf(conf_file,"%le %le\n",-box.zhalf,box.zhalf);
+        fprintf(conf_file,"%i\n",Npart);
+        fprintf(conf_file,"%le %le\n",-box.xhalf,box.xhalf);
+        fprintf(conf_file,"%le %le\n",-box.yhalf,box.yhalf);
+        fprintf(conf_file,"%le %le\n",-box.zhalf,box.zhalf);
 
         for (i=0;i<Npart;i++)
         {
@@ -803,7 +863,7 @@ void write_pos(int mode)
 void write_traj(int i)
 {
 
-    fprintf(traj_file,"%d %d \t%e \t%e \t%e \t%e \t%e \t%e \t%e \t%e \t%e\n",step,i,particle[i].x,particle[i].y,particle[i].z,particle[i].vx,particle[i].vy,particle[i].vz,particle[i].fx,particle[i].fy,particle[i].fz);
+    fprintf(traj_file,"%6d %4d \t%e \t%e \t%e \t%e \t%e \t%e \t%e \t%e \t%e\n",step,i,particle[i].x,particle[i].y,particle[i].z,particle[i].vx,particle[i].vy,particle[i].vz,particle[i].fx,particle[i].fy,particle[i].fz);
 
 }
 
@@ -829,6 +889,7 @@ void main()
     printf("Begin Equilibration\n");
 
     //Equilibration
+    mode = 0;
     while (step<nsteps_equil)
     {
 #ifdef USE_NLIST
@@ -836,8 +897,8 @@ void main()
 #else
         force();
 #endif
-        integrate_euler();
-//        integrate();
+//        integrate_euler();
+        integrate();
 //        time = time + tstep;
         step += 1;
 //        sample();
@@ -845,6 +906,7 @@ void main()
 
     printf("Begin MD\n");
     //Production
+    mode = 1;
     step = 0;
     while (step<nsteps)
     {
@@ -853,11 +915,10 @@ void main()
 #else
         force();
 #endif
-        integrate_euler();
-//        integrate();
+//        integrate_euler();
+        integrate();
         time = time + tstep;
         step += 1;
-       
 
         sample();
     }
@@ -867,6 +928,8 @@ void main()
 
     rdf(2);             //Save RDF values
     write_pos(0);       //Save last configuration for continuing the simulation run
+    write_rho_z();
+    write_press_z();
     fclose(prop_file);
     fclose(traj_file);
 }
