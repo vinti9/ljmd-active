@@ -304,26 +304,28 @@ void partforce(int i, int j)
                 jbin = particle[j].zbin;
                 if(ibin == jbin)
                 {
-                    //for(p=0;p<6;p++)
-                    //{
-                    //    press_z[ibin][p] = press_z[ibin][p] + pressure[p];
-                    //}
-                }
-                else
-                {
                     press_z[ibin][0] = press_z[ibin][0] + ff*xr*xr;   //Pxx
                     press_z[ibin][1] = press_z[ibin][1] + ff*yr*yr;   //Pyy
                     press_z[ibin][2] = press_z[ibin][2] + ff*zr*zr;   //Pzz
                     press_z[ibin][3] = press_z[ibin][3] + ff*xr*yr;   //Pxy
                     press_z[ibin][4] = press_z[ibin][4] + ff*yr*zr;   //Pyz
                     press_z[ibin][5] = press_z[ibin][5] + ff*zr*xr;   //Pzx
+                }
+                else
+                {
+                    press_z[ibin][0] = press_z[ibin][0] + ff*xr*xr/2.0;   //Pxx
+                    press_z[ibin][1] = press_z[ibin][1] + ff*yr*yr/2.0;   //Pyy
+                    press_z[ibin][2] = press_z[ibin][2] + ff*zr*zr/2.0;   //Pzz
+                    press_z[ibin][3] = press_z[ibin][3] + ff*xr*yr/2.0;   //Pxy
+                    press_z[ibin][4] = press_z[ibin][4] + ff*yr*zr/2.0;   //Pyz
+                    press_z[ibin][5] = press_z[ibin][5] + ff*zr*xr/2.0;   //Pzx
                     
-                    press_z[jbin][0] = press_z[jbin][0] + ff*xr*xr;   //Pxx
-                    press_z[jbin][1] = press_z[jbin][1] + ff*yr*yr;   //Pyy
-                    press_z[jbin][2] = press_z[jbin][2] + ff*zr*zr;   //Pzz
-                    press_z[jbin][3] = press_z[jbin][3] + ff*xr*yr;   //Pxy
-                    press_z[jbin][4] = press_z[jbin][4] + ff*yr*zr;   //Pyz
-                    press_z[jbin][5] = press_z[jbin][5] + ff*zr*xr;   //Pzx
+                    press_z[jbin][0] = press_z[jbin][0] + ff*xr*xr/2.0;   //Pxx
+                    press_z[jbin][1] = press_z[jbin][1] + ff*yr*yr/2.0;   //Pyy
+                    press_z[jbin][2] = press_z[jbin][2] + ff*zr*zr/2.0;   //Pzz
+                    press_z[jbin][3] = press_z[jbin][3] + ff*xr*yr/2.0;   //Pxy
+                    press_z[jbin][4] = press_z[jbin][4] + ff*yr*zr/2.0;   //Pyz
+                    press_z[jbin][5] = press_z[jbin][5] + ff*zr*xr/2.0;   //Pzx
                 }
             }
         }
