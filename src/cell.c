@@ -57,6 +57,11 @@ void init_cells(void)
                          if(y+dy < 0) dy=ncelly-1; if(y+dy > ncelly-1) dy=-ncelly+1;
                          if(z+dz < 0) dz=ncellz-1; if(z+dz > ncellz-1) dz=-ncellz+1;
                          j = (x+dx)*ncelly*ncellz+(y+dy)*ncellz+(z+dz);
+                         if(j>n_cells)
+                         {
+                            printf("Error!: Check init_cells()/dimensions, cell_i=%d, cell_j=%d, dx=%d, dy=%d, dz=%d\n",i,j,dx,dy,dz);
+                            exit(1);
+                         }
                          cells[i].neighbors[k]=j;
                          k++;
                      }
@@ -74,7 +79,12 @@ void init_cells(void)
     }
     cells[j].particles[cells[j].n] = i;	            //Store the particle no. i corresponding cell
     particle[i].cell = j;                           //Store the cell no. in cooresponding particle
-    cells[j].n++;							        
+    cells[j].n++;
+    if(cells[j].n >= MAXNPART_CELL)
+    {
+        printf("Error!: init_cells(), Too many particles in a cell, check MAXNPART_CELL, particle=%d, cell=%d, cells[j].n=%d\n",i ,j, cells[j].n);
+        exit(1);
+    }
   }
   printf("number of cells is %d\n",n_cells);
 }
@@ -109,6 +119,11 @@ void move2cell(int i)
     cells[c_new].particles[cells[c_new].n]=i;			
     cells[c_new].n++;					
     particle[i].cell = c_new;
+    if(cells[c_new].n >= MAXNPART_CELL)
+    {
+        printf("Error!: move2cell(), Too many particles in a cell, check MAXNPART_CELL, particle=%d, c_new=%d, cells[c_new].n=%d\n",i ,c_new, cells[c_new].n);
+        exit(1);
+    }
   }
   move2zbin(i);
 }

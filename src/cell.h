@@ -1,5 +1,5 @@
 
-#define MAXNPART_CELL 60
+#define MAXNPART_CELL 100
 #define MAXNCELLS 12*12*12
 
 //Cell list structure for storing linked-list of neighbring cells
