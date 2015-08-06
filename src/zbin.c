@@ -54,6 +54,7 @@ void init_zbins()
             press_z[j][k] = 0.0;
             avg_press_z[j][k] = 0.0;
         }
+        npart_z[j] = 0.0;
         rho_z[j] = 0.0;
     }
     printf("dzbin=%e, nzbin=%d\n",dzbin,nzbin);
@@ -65,7 +66,12 @@ void measure_rho_z()
     int i;
     for(i=0; i<Npart; i++)
     {
-        rho_z[particle[i].zbin]++;
+        npart_z[particle[i].zbin]++;
+    }
+    
+    for(i=0; i<nzbin; i++)
+    {
+        rho_z[i] = npart_z[i]*100/(vzbin*step);
     }
 }
 
@@ -77,8 +83,7 @@ void measure_press_z()
     {
         for(q=0; q<6; q++)
         {
-//            avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
-            press_z[p][q] = (Temp*rho_z[p]*100/step + press_z[p][q])*vzbini;
+            press_z[p][q] = Temp*rho_z[p] + press_z[p][q]*vzbini;
             avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
         }
     }
@@ -92,12 +97,13 @@ void write_rho_z()
     fp = fopen("rhoz.dat","w");
     for(i=0; i<nzbin; i++)
     {
-        fprintf(fp,"%4d %+0.5e %+.5e\n",i,(dzbin*i-box.zhalf),rho_z[i]*100/(vzbin*step));
+        fprintf(fp,"%4d %+0.5e %+.5e\n",i,(dzbin*i-box.zhalf),rho_z[i]);
     }
     fclose(fp);
 }
 
 //Write Pressure profile along z bins
+//The pressure is cumulative average till the time step
 void write_press_z()
 {
     int bin;

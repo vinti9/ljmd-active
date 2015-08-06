@@ -71,6 +71,7 @@ void initialize()
     dummy = fscanf(prm_file,"%s %d",str,&continu);
     dummy = fscanf(prm_file,"%s %d",str,&lattice);
     dummy = fscanf(prm_file,"%s %lf %lf %lf",str,&Lx,&Ly,&Lz);
+    dummy = fscanf(prm_file,"%s %d",str,&save);
     fclose(prm_file);
 
     dsfmt_init_gen_rand(&dsfmt,seed);
@@ -116,6 +117,7 @@ void initialize()
     {
 //        init_lattice_pos(lattice);
         double zslab = (Npart/density)/(box.xlen*box.ylen);
+        //double zslab = box.zlen;                                    //To make cubic box
         init_lattice_slab(lattice, -box.xhalf, -box.yhalf, -zslab/2.0, box.xlen, box.ylen, zslab);
         printf("Initalized positions\n");
         init_lattice_vel();
@@ -227,7 +229,12 @@ void force_nlist()
             for (q=0; q<cells[inbr].n; q++)
             {
                 j = cells[inbr].particles[q];
-                if (j>i)
+                if (j>Npart)
+                {
+                    printf("Error!: force_nlist, step=%d, i=%d, icell=%d, p=%d, inbr=%d, q=%d, j=%d\n",step,i,icell,p,inbr,q,j);
+                    exit(1);
+                }
+                else if (j>i)
                 {
                     partforce(i,j);
                 }
@@ -304,25 +311,19 @@ void partforce(int i, int j)
                 }
                 else
                 {
-                    for(p=0;p<6;p++)
-                    {   
-                        //press_z[ibin][p] = press_z[ibin][p] + pressure[p]/2;
-                        //press_z[jbin][p] = press_z[jbin][p] + pressure[p]/2;
-                        press_z[ibin][0] = press_z[ibin][0] + ff*xr*xr;   //Pxx
-                        press_z[ibin][1] = press_z[ibin][1] + ff*yr*yr;   //Pyy
-                        press_z[ibin][2] = press_z[ibin][2] + ff*zr*zr;   //Pzz
-                        press_z[ibin][3] = press_z[ibin][3] + ff*xr*yr;   //Pxy
-                        press_z[ibin][4] = press_z[ibin][4] + ff*yr*zr;   //Pyz
-                        press_z[ibin][5] = press_z[ibin][5] + ff*zr*xr;   //Pzx
-                        
-                        press_z[jbin][0] = press_z[jbin][0] - ff*xr*xr;   //Pxx
-                        press_z[jbin][1] = press_z[jbin][1] - ff*yr*yr;   //Pyy
-                        press_z[jbin][2] = press_z[jbin][2] - ff*zr*zr;   //Pzz
-                        press_z[jbin][3] = press_z[jbin][3] - ff*xr*yr;   //Pxy
-                        press_z[jbin][4] = press_z[jbin][4] - ff*yr*zr;   //Pyz
-                        press_z[jbin][5] = press_z[jbin][5] - ff*zr*xr;   //Pzx
-          
-                    }
+                    press_z[ibin][0] = press_z[ibin][0] + ff*xr*xr;   //Pxx
+                    press_z[ibin][1] = press_z[ibin][1] + ff*yr*yr;   //Pyy
+                    press_z[ibin][2] = press_z[ibin][2] + ff*zr*zr;   //Pzz
+                    press_z[ibin][3] = press_z[ibin][3] + ff*xr*yr;   //Pxy
+                    press_z[ibin][4] = press_z[ibin][4] + ff*yr*zr;   //Pyz
+                    press_z[ibin][5] = press_z[ibin][5] + ff*zr*xr;   //Pzx
+                    
+                    press_z[jbin][0] = press_z[jbin][0] + ff*xr*xr;   //Pxx
+                    press_z[jbin][1] = press_z[jbin][1] + ff*yr*yr;   //Pyy
+                    press_z[jbin][2] = press_z[jbin][2] + ff*zr*zr;   //Pzz
+                    press_z[jbin][3] = press_z[jbin][3] + ff*xr*yr;   //Pxy
+                    press_z[jbin][4] = press_z[jbin][4] + ff*yr*zr;   //Pyz
+                    press_z[jbin][5] = press_z[jbin][5] + ff*zr*xr;   //Pzx
                 }
             }
         }
@@ -353,7 +354,8 @@ void partforce(int i, int j)
 }
 
 
-
+/*Function to generate simple cubic or a Random configuration
+ **/
 void init_lattice_pos(int lattice)
 {
     int i=0;
@@ -564,15 +566,16 @@ void integrate_euler()
     //Pressure profile in z-direction
     if(step%100 == 0)
     {
-        for(p=0; p<nzbin; p++)
-        {
-            for(q=0; q<6; q++)
-            {
-                press_z[p][q] = (Npart*Temp + press_z[p][q])*vzbini;
-                avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
-            }
-        }
-        //measure_press_z();
+        //for(p=0; p<nzbin; p++)
+        //{
+        //    for(q=0; q<6; q++)
+        //    {
+        //        //press_z[p][q] = (Npart*Temp + press_z[p][q])*vzbini;
+        //        press_z[p][q] = (Temp*rho_z[p]*100/step + press_z[p][q])*vzbini;
+        //        avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
+        //    }
+        //}
+        measure_press_z();
     }
 #endif
     
@@ -651,15 +654,16 @@ void integrate()
     if(step%100 == 0)
     {
         //Pressure profile in z-direction
-        for(p=0; p<nzbin; p++)
-        {
-            for(q=0; q<6; q++)
-            {
-                press_z[p][q] = (Npart*Temp + press_z[p][q])*vzbini;
-                avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
-            }
-        }
-        //measure_press_z();
+        //for(p=0; p<nzbin; p++)
+        //{
+        //    for(q=0; q<6; q++)
+        //    {
+        //        press_z[p][q] = (Npart*Temp + press_z[p][q])*vzbini;
+        //        press_z[p][q] = (Temp*rho_z[p]*100/step + press_z[p][q])*vzbini;
+        //        avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
+        //    }
+        //}
+        measure_press_z();
     }
 #endif
 
@@ -711,7 +715,10 @@ void sample()
         write_pos(1);           //write conf in xyz format
     }
 
-    fprintf (prop_file,"%7d \t%+.3e \t%+.3e \t%+.3e \n",step,(en/Npart),Temp,(pressure[0]+pressure[1]+pressure[2])/3.0);
+    if(step%save == 0)
+    {
+        fprintf (prop_file,"%7d \t%+.3e \t%+.3e \t%+.3e \n",step,(en/Npart),Temp,(pressure[0]+pressure[1]+pressure[2])/3.0);
+    }
     
 }
 
@@ -731,12 +738,12 @@ void write_pressure()
 //function to put particle in the periodic simulation box
 void pbc(int i)
 {
-    while(particle[i].x > box.xhalf) { particle[i].x = fmod(particle[i].x,box.xlen)-box.xlen; particle[i].xold = fmod(particle[i].x,box.xlen)-box.xlen; }
-    while(particle[i].x <-box.xhalf) { particle[i].x = fmod(particle[i].x,box.xlen)+box.xlen; particle[i].xold = fmod(particle[i].x,box.xlen)+box.xlen; }
-    while(particle[i].y > box.yhalf) { particle[i].y = fmod(particle[i].y,box.ylen)-box.ylen; particle[i].yold = fmod(particle[i].y,box.ylen)-box.ylen; }
-    while(particle[i].y <-box.yhalf) { particle[i].y = fmod(particle[i].y,box.ylen)+box.ylen; particle[i].yold = fmod(particle[i].y,box.ylen)+box.ylen; }
-    while(particle[i].z > box.zhalf) { particle[i].z = fmod(particle[i].z,box.zlen)-box.zlen; particle[i].zold = fmod(particle[i].z,box.zlen)-box.zlen; }
-    while(particle[i].z <-box.zhalf) { particle[i].z = fmod(particle[i].z,box.zlen)+box.zlen; particle[i].zold = fmod(particle[i].z,box.zlen)+box.zlen; }
+    while(particle[i].x > box.xhalf) { particle[i].x = fmod(particle[i].x,box.xlen)-box.xlen; particle[i].xold = fmod(particle[i].xold,box.xlen)-box.xlen; }
+    while(particle[i].x <-box.xhalf) { particle[i].x = fmod(particle[i].x,box.xlen)+box.xlen; particle[i].xold = fmod(particle[i].xold,box.xlen)+box.xlen; }
+    while(particle[i].y > box.yhalf) { particle[i].y = fmod(particle[i].y,box.ylen)-box.ylen; particle[i].yold = fmod(particle[i].yold,box.ylen)-box.ylen; }
+    while(particle[i].y <-box.yhalf) { particle[i].y = fmod(particle[i].y,box.ylen)+box.ylen; particle[i].yold = fmod(particle[i].yold,box.ylen)+box.ylen; }
+    while(particle[i].z > box.zhalf) { particle[i].z = fmod(particle[i].z,box.zlen)-box.zlen; particle[i].zold = fmod(particle[i].zold,box.zlen)-box.zlen; }
+    while(particle[i].z <-box.zhalf) { particle[i].z = fmod(particle[i].z,box.zlen)+box.zlen; particle[i].zold = fmod(particle[i].zold,box.zlen)+box.zlen; }
 #ifdef USE_NLIST
     move2cell(i);
 #endif
@@ -796,7 +803,7 @@ void read_conf()
     fp = fopen("pos.dat","r");   
     while(j<Npart && i<Npart)
     {
-        dummy = fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf",&i,&particle[j].x,&particle[j].y,&particle[j].z,&particle[j].vx,&particle[j].vy,&particle[j].vz,&particle[i].xold,&particle[i].yold,&particle[i].zold);
+        dummy = fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf",&i,&particle[j].x,&particle[j].y,&particle[j].z,&particle[j].vx,&particle[j].vy,&particle[j].vz,&particle[j].xold,&particle[j].yold,&particle[j].zold);
         j += 1;
     }
     if(i>Npart || j!=Npart)
@@ -842,7 +849,7 @@ void write_pos(int mode)
     {
 
         //Write particle configuration in standard xyz format
-        sprintf(filename,"pos_%.05i.xyz",save_count++);
+        sprintf(filename,"pos_%.05i.xyz",++save_count);
         FILE *conf_file;
         conf_file = fopen(filename,"w");
         fprintf(conf_file,"%i\n",Npart);
@@ -852,7 +859,7 @@ void write_pos(int mode)
 
         for (i=0;i<Npart;i++)
         {
-            fprintf(conf_file,"%5d \t%+.3e \t%+.3e \t%+.3e\n",i,particle[i].x,particle[i].y,particle[i].z);
+            fprintf(conf_file,"%5d %+.3e %+.3e %+.3e %+0.3e %+0.3e %+0.3e\n",i,particle[i].x,particle[i].y,particle[i].z,particle[i].vx,particle[i].vy,particle[i].vz);
         }
         fclose(conf_file);
     }
@@ -897,7 +904,7 @@ void main()
 #else
         force();
 #endif
-//        integrate_euler();
+        //integrate_euler();
         integrate();
 //        time = time + tstep;
         step += 1;
@@ -921,6 +928,12 @@ void main()
         step += 1;
 
         sample();
+        
+        if(step%1000 == 0)
+        {
+            write_rho_z();
+            write_press_z();
+        }
     }
     
     printf("End program\n");
@@ -928,8 +941,7 @@ void main()
 
     rdf(2);             //Save RDF values
     write_pos(0);       //Save last configuration for continuing the simulation run
-    write_rho_z();
-    write_press_z();
+    
     fclose(prop_file);
     fclose(traj_file);
 }

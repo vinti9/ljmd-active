@@ -41,6 +41,7 @@ double  Av[6];                  //Array storing average values of properties
 int     continu;                //parameter indicating a continuing simulation run or starting fresh
 int     lattice;                //parameter indicating type of lattice(random/cubic/bcc...etc) for initialization
 int     mode;                   //Mode = 0: Equilibration/ 1: Production
+int     save;                   //Frequency of saving data to prop.dat
 
 //Variables for brownian dynamics
 double  friction_coeff;                  //friction coefficient
