@@ -259,7 +259,8 @@ void partforce(int i, int j)
     double r6i = 0.0;
     double ff = 0.0;
     double virial = 0.0;
-    int    ibin,jbin,p;
+    int    ibin,jbin,pz,nz,dz;
+    double nzi;
 
 
     xr = particle[i].x-particle[j].x;
@@ -302,7 +303,7 @@ void partforce(int i, int j)
                 //Pressure profile along z direction
                 ibin = particle[i].zbin;
                 jbin = particle[j].zbin;
-                if(ibin == jbin)
+                if(ibin == jbin)                //particle pair in the same slab
                 {
                     press_z[ibin][0] = press_z[ibin][0] + ff*xr*xr;   //Pxx
                     press_z[ibin][1] = press_z[ibin][1] + ff*yr*yr;   //Pyy
@@ -311,21 +312,20 @@ void partforce(int i, int j)
                     press_z[ibin][4] = press_z[ibin][4] + ff*yr*zr;   //Pyz
                     press_z[ibin][5] = press_z[ibin][5] + ff*zr*xr;   //Pzx
                 }
-                else
+                else                            //add (1/n)th contribution to all the slabs in between the particle pair
                 {
-                    press_z[ibin][0] = press_z[ibin][0] + ff*xr*xr/2.0;   //Pxx
-                    press_z[ibin][1] = press_z[ibin][1] + ff*yr*yr/2.0;   //Pyy
-                    press_z[ibin][2] = press_z[ibin][2] + ff*zr*zr/2.0;   //Pzz
-                    press_z[ibin][3] = press_z[ibin][3] + ff*xr*yr/2.0;   //Pxy
-                    press_z[ibin][4] = press_z[ibin][4] + ff*yr*zr/2.0;   //Pyz
-                    press_z[ibin][5] = press_z[ibin][5] + ff*zr*xr/2.0;   //Pzx
-                    
-                    press_z[jbin][0] = press_z[jbin][0] + ff*xr*xr/2.0;   //Pxx
-                    press_z[jbin][1] = press_z[jbin][1] + ff*yr*yr/2.0;   //Pyy
-                    press_z[jbin][2] = press_z[jbin][2] + ff*zr*zr/2.0;   //Pzz
-                    press_z[jbin][3] = press_z[jbin][3] + ff*xr*yr/2.0;   //Pxy
-                    press_z[jbin][4] = press_z[jbin][4] + ff*yr*zr/2.0;   //Pyz
-                    press_z[jbin][5] = press_z[jbin][5] + ff*zr*xr/2.0;   //Pzx
+                    nz = (ibin>jbin) ? (ibin-jbin+1) : (jbin-ibin+1);
+                    nzi = 1.0/nz;
+                    for (dz=0; dz<nz ; dz++)
+                    {
+                        pz = ibin + dz;
+                        press_z[pz][0] = press_z[pz][0] + ff*xr*xr*nzi;   //Pxx
+                        press_z[pz][1] = press_z[pz][1] + ff*yr*yr*nzi;   //Pyy
+                        press_z[pz][2] = press_z[pz][2] + ff*zr*zr*nzi;   //Pzz
+                        press_z[pz][3] = press_z[pz][3] + ff*xr*yr*nzi;   //Pxy
+                        press_z[pz][4] = press_z[pz][4] + ff*yr*zr*nzi;   //Pyz
+                        press_z[pz][5] = press_z[pz][5] + ff*zr*xr*nzi;   //Pzx
+                    }
                 }
             }
         }
@@ -906,8 +906,8 @@ void main()
 #else
         force();
 #endif
-        //integrate_euler();
-        integrate();
+        integrate_euler();
+        //integrate();
 //        time = time + tstep;
         step += 1;
 //        sample();
@@ -924,8 +924,8 @@ void main()
 #else
         force();
 #endif
-//        integrate_euler();
-        integrate();
+        integrate_euler();
+        //integrate();
         time = time + tstep;
         step += 1;
 
