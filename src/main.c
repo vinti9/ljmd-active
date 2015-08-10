@@ -139,7 +139,7 @@ void initialize()
     init_zbins();           //Initialize zbin profiles
 
     
-    ecut = 4*epsilon*(1.0/(pow(rcut,12))-1.0/(pow(rcut,6)));        //calculate ecut
+    ecut = 4*beta*epsilon*(1.0/(pow(rcut,12))-1.0/(pow(rcut,6)));        //calculate ecut
     printf("ecut=%e\n",ecut);
 
     //Initialize stress tensor
@@ -333,8 +333,8 @@ void partforce(int i, int j)
 #endif 
 
         //Update the system potential energy
-        //en = en + 4*epsilon*beta*r6i*(r6i-1) - ecut;
-        en = en + 4*epsilon*r6i*(r6i-1) - ecut;
+        en = en + 4*epsilon*beta*r6i*(r6i-1) - ecut;
+        //en = en + 4*epsilon*r6i*(r6i-1) - ecut;
 //Intentional mistake below to match system values with Vassilis' code
 //        en = en + 4*epsilon*beta*r6i*(r6i-1) + ecut;
 
