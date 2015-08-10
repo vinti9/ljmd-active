@@ -34,6 +34,7 @@ void init_zbins()
     double zgrid;
     
     zgrid = pow(density,-0.34);
+    //dzbin = zgrid/4.0;
     dzbin = zgrid/2.0;
     //dzbin = zgrid;
     nzbin = box.zlen/dzbin;
@@ -56,6 +57,7 @@ void init_zbins()
         }
         npart_z[j] = 0.0;
         rho_z[j] = 0.0;
+        avg_rho_z[j] = 0.0;
     }
     printf("dzbin=%e, nzbin=%d\n",dzbin,nzbin);
 }
@@ -71,7 +73,9 @@ void measure_rho_z()
     
     for(i=0; i<nzbin; i++)
     {
-        rho_z[i] = npart_z[i]*100/(vzbin*step);
+        rho_z[i] = npart_z[i]/vzbin;
+        avg_rho_z[i] = avg_rho_z[i] + rho_z[i];
+        npart_z[i] = 0;       //Reinitialize to zero for next measurement
     }
 }
 
@@ -83,7 +87,8 @@ void measure_press_z()
     {
         for(q=0; q<6; q++)
         {
-            press_z[p][q] = Temp*rho_z[p] + press_z[p][q]*vzbini;
+            //press_z[p][q] = Temp*rho_z[p] + press_z[p][q]*vzbini;
+            press_z[p][q] = rho_z[p]/beta + press_z[p][q]*vzbini;
             avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
         }
     }
@@ -97,7 +102,8 @@ void write_rho_z()
     fp = fopen("rhoz.dat","w");
     for(i=0; i<nzbin; i++)
     {
-        fprintf(fp,"%4d %+0.5e %+.5e\n",i,(dzbin*i-box.zhalf),rho_z[i]);
+        //fprintf(fp,"%4d %+0.5e %+.5e\n",i,(dzbin*i-box.zhalf),rho_z[i]);
+        fprintf(fp,"%4d %+0.5e %+.5e\n",i,(dzbin*i-box.zhalf),avg_rho_z[i]*100/step);
     }
     fclose(fp);
 }

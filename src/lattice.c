@@ -16,6 +16,7 @@ void init_lattice_slab(int lattice, double x0, double y0, double z0, double xlen
     int iy=0;
     int iz=0;
     double xgrid,ygrid,zgrid;
+    int l,nx,ny,nz;
     
 //    printf("%d,%f,%f\n",Npart,pow(Npart,0.333),box/pow(Npart,0.333));
     int p = (int)pow(Npart,0.34);
@@ -34,12 +35,15 @@ void init_lattice_slab(int lattice, double x0, double y0, double z0, double xlen
     }
     else if(lattice ==1)        //Regular simple cubic lattice as per slab requirement
     {
-        xgrid = pow(density,-0.34);
+        xgrid = pow(density,1.0/3.0);
         ygrid = xgrid;
         zgrid = xgrid;
+        nx = round(xlen/xgrid);
+        ny = round(ylen/ygrid);
+        nz = round(zlen/zgrid);
         printf("SC lattice\n");
         printf("%d, xgrid=%f, ygrid=%f, zgrid=%f\n",p,xgrid,ygrid,zgrid);
-        i = 0;
+        printf("nx=%d, ny=%d, nz=%d\n",nx,ny,nz);
         for (iz=0;(iz*zgrid)<zlen;iz++)
         {
            for(ix=0;(ix*xgrid)<xlen;ix++)
@@ -61,7 +65,6 @@ void init_lattice_slab(int lattice, double x0, double y0, double z0, double xlen
     else if(lattice == 2)      //Regular FCC lattice as per slab requirement
     {
         double atpos[4][3];
-        int l,nx,ny,nz;
         
         xgrid = pow(4.0/density,1.0/3.0);
         ygrid = xgrid;

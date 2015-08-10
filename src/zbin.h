@@ -7,6 +7,7 @@ double  vzbin;          //Volume of each bin
 double  dzbini;         //dzbin inverse
 double  vzbini;         //vzbin inverse
 double  rho_z[MAXZBIN];         //density profile
+double  avg_rho_z[MAXZBIN];         //density profile
 double  npart_z[MAXZBIN];       //No. of particles profile
 double  press_z[MAXZBIN][6];    //inst. pressure profile
 double  avg_press_z[MAXZBIN][6];    //avg. pressure profile
