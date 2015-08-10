@@ -98,7 +98,7 @@ void initialize()
 //Variables for brownian dynamics
     C1 = 1.0/friction_coeff;
     sqrt_tstep = sqrt(tstep);
-    C2 = pow(2.0,0.5)/(beta*friction_coeff);
+    C2 = pow(2.0/(beta*friction_coeff),0.5);
     C3 = pow(2.0*rot_diff_coeff,0.5);
 
     
@@ -139,7 +139,7 @@ void initialize()
     init_zbins();           //Initialize zbin profiles
 
     
-    ecut = 4*beta*epsilon*(1.0/(pow(rcut,12))-1.0/(pow(rcut,6)));        //calculate ecut
+    ecut = 4*epsilon*(1.0/(pow(rcut,12))-1.0/(pow(rcut,6)));        //calculate ecut
     printf("ecut=%e\n",ecut);
 
     //Initialize stress tensor
@@ -333,7 +333,8 @@ void partforce(int i, int j)
 #endif 
 
         //Update the system potential energy
-        en = en + 4*epsilon*beta*r6i*(r6i-1) - ecut;
+        //en = en + 4*epsilon*beta*r6i*(r6i-1) - ecut;
+        en = en + 4*epsilon*r6i*(r6i-1) - ecut;
 //Intentional mistake below to match system values with Vassilis' code
 //        en = en + 4*epsilon*beta*r6i*(r6i-1) + ecut;
 
@@ -935,14 +936,12 @@ void main()
         {
             write_rho_z();
             write_press_z();
+            write_pos(0);       //Save last configuration for continuing the simulation run
+            rdf(2);             //Save RDF values
         }
     }
     
     printf("End program\n");
-
-
-    rdf(2);             //Save RDF values
-    write_pos(0);       //Save last configuration for continuing the simulation run
     
     fclose(prop_file);
     fclose(traj_file);
