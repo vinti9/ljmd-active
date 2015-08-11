@@ -259,8 +259,9 @@ void partforce(int i, int j)
     double r6i = 0.0;
     double ff = 0.0;
     double virial = 0.0;
-    int    ibin,jbin,pz,nz,dz;
-    double nzi;
+    int    ibin,jbin,pz,nz,dz, low_bin, high_bin;
+    double nzi,low_z, high_z;
+    int    boxcross = 0;
 
 
     xr = particle[i].x-particle[j].x;
@@ -315,10 +316,45 @@ void partforce(int i, int j)
                 else                            //add (1/n)th contribution to all the slabs in between the particle pair
                 {
                     nz = (ibin>jbin) ? (ibin-jbin+1) : (jbin-ibin+1);
-                    nzi = 1.0/nz;
+                    if(nz > nzbin/2) { boxcross = 1;} 
+                    //Below if-else to take care for the nearest images of particles
+                    if (boxcross == 0)
+                    {
+                        low_bin = (ibin < jbin) ? ibin : jbin ;
+                        high_bin= (ibin < jbin) ? jbin : ibin ;
+                        nz      = high_bin - low_bin + 1;
+                        low_z   = (ibin < jbin) ? particle[i].z : particle[j].z;
+                        high_z  = (ibin < jbin) ? particle[j].z : particle[i].z;	
+                    }	
+                    else
+                    {
+                        low_bin = (ibin > jbin) ? ibin : jbin ;
+                        high_bin= (ibin > jbin) ? jbin : ibin ;
+                        nz      = nzbin + (high_bin - low_bin) + 1;
+                        low_z   = (ibin > jbin) ? particle[i].z : particle[j].z;
+                        high_z  = (ibin > jbin) ? particle[j].z : particle[i].z;		
+                    }
+                    //nzi = 1.0/nz;
                     for (dz=0; dz<nz ; dz++)
                     {
-                        pz = ibin + dz;
+                        //pz = low_bin + dz;
+                        pz = (low_bin + dz)%nzbin;               //Periodic images of z-bin
+                        if (pz == low_bin)
+                        {
+                            nzi = (((pz+1)*dzbin - box.zhalf) - low_z)/zr;
+                            nzi = (nzi>0) ? (nzi) : (-nzi);     //Take only positive value
+                        }
+                        else if (pz == high_bin)
+                        {
+                            nzi = (high_z - (pz*dzbin - box.zhalf))/zr;
+                            nzi = (nzi>0) ? (nzi) : (-nzi);     //Take only positive value
+                        }
+                        else
+                        {
+                            nzi = dzbin/zr;
+                            nzi = (nzi>0) ? (nzi) : (-nzi);     //Take only positive value
+                        }
+
                         press_z[pz][0] = press_z[pz][0] + ff*xr*xr*nzi;   //Pxx
                         press_z[pz][1] = press_z[pz][1] + ff*yr*yr*nzi;   //Pyy
                         press_z[pz][2] = press_z[pz][2] + ff*zr*zr*nzi;   //Pzz
