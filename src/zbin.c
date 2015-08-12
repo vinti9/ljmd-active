@@ -16,18 +16,18 @@ void move2zbin(int i)
 {
     int zbin_new,zbin_old,count,j;
   
-  zbin_new = coords2zbin(particle[i].z);  
-  zbin_old = particle[i].zbin;					
-  if(zbin_new < 0 || zbin_new >= nzbin) 
-  { 
+    zbin_new = coords2zbin(particle[i].z);  
+    zbin_old = particle[i].zbin;
+    if(zbin_new < 0 || zbin_new >= nzbin) 
+    { 
         printf("Error: out of zbin?, i=%d, zbin_new=%d, zbin_old=%d\n",i,zbin_new,zbin_old);  
-      printf("i.x=%.3f,i.y=%.3f,i.z=%.3f\n",particle[i].x,particle[i].y,particle[i].z);
-      exit(1); 
-  } 
+        printf("i.x=%.3f,i.y=%.3f,i.z=%.3f\n",particle[i].x,particle[i].y,particle[i].z);
+        exit(1); 
+    }
     if (zbin_new != zbin_old)
     {
         particle[i].zbin = zbin_new;          //Update the slab no. to particle
-}
+    }
 }
 
 //Initialize zbin parameters
@@ -104,6 +104,42 @@ void measure_press_z()
             slabs_z[p].avg_press[q] = slabs_z[p].avg_press[q] + slabs_z[p].press[q];
         }
     }
+    measure_active_press_z();
+}
+
+//Measure active pressure as per z bins
+void measure_active_press_z()
+{
+    int p,bin,i;
+    double vdotr[nzbin][3];
+    
+    for(p=0; p<nzbin; p++)
+    {
+        vdotr[p][0] = 0.0;
+        vdotr[p][1] = 0.0;
+        vdotr[p][2] = 0.0;
+    }
+    
+    for(i=0; i<Npart; i++)
+    {
+        bin = particle[i].zbin;
+        vdotr[bin][0] += particle[i].vx*particle[i].x;
+        vdotr[bin][1] += particle[i].vy*particle[i].y;
+        vdotr[bin][2] += particle[i].vz*particle[i].z;
+    }
+    
+    for(p=0; p<nzbin; p++)
+    {
+        //Calculate inst. active pressure
+        slabs_z[p].press_active[0] = friction_coeff*Fprop*vdotr[p][0]*vzbini;
+        slabs_z[p].press_active[1] = friction_coeff*Fprop*vdotr[p][1]*vzbini;
+        slabs_z[p].press_active[2] = friction_coeff*Fprop*vdotr[p][2]*vzbini;
+        
+        //Update the stored cumulative sum 
+        slabs_z[p].avg_press_active[0] += slabs_z[p].press_active[0];
+        slabs_z[p].avg_press_active[1] += slabs_z[p].press_active[1];
+        slabs_z[p].avg_press_active[2] += slabs_z[p].press_active[2];
+    }
 }
 
 //Write density profile as per z bins
@@ -131,6 +167,7 @@ void write_press_z()
     {
         fprintf(fp,"%4d %+.3e",bin,(dzbin*bin-box.zhalf));
         fprintf(fp," %+.3e %+.3e %+.3e %+.3e %+.3e %+.3e",slabs_z[bin].avg_press[0]*100/step,slabs_z[bin].avg_press[1]*100/step,slabs_z[bin].avg_press[2]*100/step,slabs_z[bin].avg_press[3]*100/step,slabs_z[bin].avg_press[4]*100/step,slabs_z[bin].avg_press[5]*100/step);
+        fprintf(fp,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_press_active[0]*100/step,slabs_z[bin].avg_press_active[1]*100/step,slabs_z[bin].avg_press_active[2]*100/step);
     }
     fclose(fp);
 }
