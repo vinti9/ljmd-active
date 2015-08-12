@@ -209,14 +209,14 @@ void force_nlist()
         pressure[s]=0.0;
     }
     
-    for(p=0; p<nzbin; p++)
-    {
-        for(q=0; q<6; q++)
-        {
-            press_z[p][q] = 0.0;
-//            avg_press_z[p][q] = 0.0;
-        }
-    }    
+//    for(p=0; p<nzbin; p++)
+//    {
+//        for(q=0; q<6; q++)
+//        {
+//            press_z[p][q] = 0.0;
+////            avg_press_z[p][q] = 0.0;
+//        }
+//    }    
 
     en = 0.0;           //Initialize potential energy to zero for the MD step
 
@@ -306,12 +306,12 @@ void partforce(int i, int j)
                 jbin = particle[j].zbin;
                 if(ibin == jbin)                //particle pair in the same slab
                 {
-                    press_z[ibin][0] = press_z[ibin][0] + ff*xr*xr;   //Pxx
-                    press_z[ibin][1] = press_z[ibin][1] + ff*yr*yr;   //Pyy
-                    press_z[ibin][2] = press_z[ibin][2] + ff*zr*zr;   //Pzz
-                    press_z[ibin][3] = press_z[ibin][3] + ff*xr*yr;   //Pxy
-                    press_z[ibin][4] = press_z[ibin][4] + ff*yr*zr;   //Pyz
-                    press_z[ibin][5] = press_z[ibin][5] + ff*zr*xr;   //Pzx
+                    slabs_z[ibin].press[0] = slabs_z[ibin].press[0] + ff*xr*xr;   //Pxx
+                    slabs_z[ibin].press[1] = slabs_z[ibin].press[1] + ff*yr*yr;   //Pyy
+                    slabs_z[ibin].press[2] = slabs_z[ibin].press[2] + ff*zr*zr;   //Pzz
+                    slabs_z[ibin].press[3] = slabs_z[ibin].press[3] + ff*xr*yr;   //Pxy
+                    slabs_z[ibin].press[4] = slabs_z[ibin].press[4] + ff*yr*zr;   //Pyz
+                    slabs_z[ibin].press[5] = slabs_z[ibin].press[5] + ff*zr*xr;   //Pzx
                 }
                 else                            //add (1/n)th contribution to all the slabs in between the particle pair
                 {
@@ -355,12 +355,12 @@ void partforce(int i, int j)
                             nzi = (nzi>0) ? (nzi) : (-nzi);     //Take only positive value
                         }
 
-                        press_z[pz][0] = press_z[pz][0] + ff*xr*xr*nzi;   //Pxx
-                        press_z[pz][1] = press_z[pz][1] + ff*yr*yr*nzi;   //Pyy
-                        press_z[pz][2] = press_z[pz][2] + ff*zr*zr*nzi;   //Pzz
-                        press_z[pz][3] = press_z[pz][3] + ff*xr*yr*nzi;   //Pxy
-                        press_z[pz][4] = press_z[pz][4] + ff*yr*zr*nzi;   //Pyz
-                        press_z[pz][5] = press_z[pz][5] + ff*zr*xr*nzi;   //Pzx
+                        slabs_z[pz].press[0] = slabs_z[pz].press[0] + ff*xr*xr*nzi;   //Pxx
+                        slabs_z[pz].press[1] = slabs_z[pz].press[1] + ff*yr*yr*nzi;   //Pyy
+                        slabs_z[pz].press[2] = slabs_z[pz].press[2] + ff*zr*zr*nzi;   //Pzz
+                        slabs_z[pz].press[3] = slabs_z[pz].press[3] + ff*xr*yr*nzi;   //Pxy
+                        slabs_z[pz].press[4] = slabs_z[pz].press[4] + ff*yr*zr*nzi;   //Pyz
+                        slabs_z[pz].press[5] = slabs_z[pz].press[5] + ff*zr*xr*nzi;   //Pzx
                     }
                 }
             }

@@ -44,7 +44,7 @@ int     mode;                   //Mode = 0: Equilibration/ 1: Production
 int     save;                   //Frequency of saving data to prop.dat
 
 //Variables for brownian dynamics
-double  friction_coeff;                  //friction coefficient
+double  friction_coeff;                  //friction coefficient = gamma
 double  C1;                     //factor for force term of Langevin equation
 double  C2;                     //factor for brownian term of Langevin equation
 double  C3;                     //factor for velocity propagation for rotational diffusion

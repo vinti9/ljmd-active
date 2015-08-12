@@ -14,17 +14,20 @@ int coords2zbin(double z)
 //Update particle zbin
 void move2zbin(int i)
 {
-  int zbin_new,zbin_old;
+    int zbin_new,zbin_old,count,j;
   
   zbin_new = coords2zbin(particle[i].z);  
   zbin_old = particle[i].zbin;					
   if(zbin_new < 0 || zbin_new >= nzbin) 
   { 
-      printf("Error: out of box?, i=%d, zbin_new=%d, zbin_old=%d\n",i,zbin_new,zbin_old);  
+        printf("Error: out of zbin?, i=%d, zbin_new=%d, zbin_old=%d\n",i,zbin_new,zbin_old);  
       printf("i.x=%.3f,i.y=%.3f,i.z=%.3f\n",particle[i].x,particle[i].y,particle[i].z);
       exit(1); 
   } 
-  particle[i].zbin = zbin_new;
+    if (zbin_new != zbin_old)
+    {
+        particle[i].zbin = zbin_new;          //Update the slab no. to particle
+}
 }
 
 //Initialize zbin parameters
@@ -42,22 +45,26 @@ void init_zbins()
     vzbin = box.xlen*box.ylen*dzbin;
     vzbini = 1.0/vzbin;
     
-    for (i=0; i<Npart; i++)
-    {
-        bin = coords2zbin(particle[i].z);
-        particle[i].zbin = bin;
-    }
-    
     for(j=0; j<nzbin; j++)
     {
         for(k=0; k<6; k++)
         {
-            press_z[j][k] = 0.0;
-            avg_press_z[j][k] = 0.0;
+            slabs_z[j].press[k] = 0.0;
+            slabs_z[j].avg_press[k] = 0.0;
+            slabs_z[j].press_active[k] = 0.0;
+            slabs_z[j].avg_press_active[k] = 0.0;
         }
-        npart_z[j] = 0.0;
-        rho_z[j] = 0.0;
-        avg_rho_z[j] = 0.0;
+        slabs_z[j].n = 0;
+        slabs_z[j].rho_z = 0.0;
+        slabs_z[j].avg_rho_z = 0.0;
+    }
+    
+    for (i=0; i<Npart; i++)
+    {
+        bin = coords2zbin(particle[i].z);
+        particle[i].zbin = bin;
+        //slabs_z[bin].part[slabs_z[bin].n] = i;      //Add the ID of particle to the slab
+        slabs_z[bin].n++;                      //Increase the count of particle to the slab
     }
     printf("dzbin=%e, nzbin=%d\n",dzbin,nzbin);
 }
@@ -66,16 +73,21 @@ void init_zbins()
 void measure_rho_z()
 {
     int i;
+    for(i=0; i<nzbin; i++)
+    {
+        slabs_z[i].rho_z = 0;       //Reinitialize to zero for next measurement
+        slabs_z[i].n = 0;
+    }
+    
     for(i=0; i<Npart; i++)
     {
-        npart_z[particle[i].zbin]++;
+        slabs_z[particle[i].zbin].n++;
     }
     
     for(i=0; i<nzbin; i++)
     {
-        rho_z[i] = npart_z[i]/vzbin;
-        avg_rho_z[i] = avg_rho_z[i] + rho_z[i];
-        npart_z[i] = 0;       //Reinitialize to zero for next measurement
+        slabs_z[i].rho_z = slabs_z[i].n*vzbini;
+        slabs_z[i].avg_rho_z = slabs_z[i].avg_rho_z + slabs_z[i].rho_z;
     }
 }
 
@@ -87,9 +99,9 @@ void measure_press_z()
     {
         for(q=0; q<6; q++)
         {
-            //press_z[p][q] = Temp*rho_z[p] + press_z[p][q]*vzbini;
-            press_z[p][q] = rho_z[p]/beta + press_z[p][q]*vzbini;
-            avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
+            //press[p][q] = Temp*rho_z[p] + press[p][q]*vzbini;
+            slabs_z[p].press[q] = slabs_z[p].rho_z/beta + slabs_z[p].press[q]*vzbini;
+            slabs_z[p].avg_press[q] = slabs_z[p].avg_press[q] + slabs_z[p].press[q];
         }
     }
 }
@@ -103,7 +115,7 @@ void write_rho_z()
     for(i=0; i<nzbin; i++)
     {
         //fprintf(fp,"%4d %+0.5e %+.5e\n",i,(dzbin*i-box.zhalf),rho_z[i]);
-        fprintf(fp,"%4d %+0.5e %+.5e\n",i,(dzbin*i-box.zhalf),avg_rho_z[i]*100/step);
+        fprintf(fp,"%4d %+0.5e %+.5e\n",i,(dzbin*i-box.zhalf),slabs_z[i].avg_rho_z*100/step);
     }
     fclose(fp);
 }
@@ -117,7 +129,8 @@ void write_press_z()
     fp = fopen("press_z.dat","w");
     for(bin=0; bin<nzbin; bin++)
     {
-        fprintf(fp,"%4d %+.3e %+.3e %+.3e %+.3e %+.3e %+.3e %+.3e\n",bin,(dzbin*bin-box.zhalf),avg_press_z[bin][0]*100/step,avg_press_z[bin][1]*100/step,avg_press_z[bin][2]*100/step,avg_press_z[bin][3]*100/step,avg_press_z[bin][4]*100/step,avg_press_z[bin][5]*100/step);
+        fprintf(fp,"%4d %+.3e",bin,(dzbin*bin-box.zhalf));
+        fprintf(fp," %+.3e %+.3e %+.3e %+.3e %+.3e %+.3e",slabs_z[bin].avg_press[0]*100/step,slabs_z[bin].avg_press[1]*100/step,slabs_z[bin].avg_press[2]*100/step,slabs_z[bin].avg_press[3]*100/step,slabs_z[bin].avg_press[4]*100/step,slabs_z[bin].avg_press[5]*100/step);
     }
     fclose(fp);
 }

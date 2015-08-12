@@ -6,11 +6,6 @@ double  dzbin;          //Bin width
 double  vzbin;          //Volume of each bin
 double  dzbini;         //dzbin inverse
 double  vzbini;         //vzbin inverse
-double  rho_z[MAXZBIN];         //density profile
-double  avg_rho_z[MAXZBIN];         //density profile
-double  npart_z[MAXZBIN];       //No. of particles profile
-double  press_z[MAXZBIN][6];    //inst. pressure profile
-double  avg_press_z[MAXZBIN][6];    //avg. pressure profile
 
 
 //Global function declarations
@@ -21,3 +16,19 @@ void measure_rho_z();
 void measure_press_z();
 void write_rho_z();
 void write_press_z();
+void measure_active_press_z();
+
+//Slab structure storing properties for bins along z direction
+typedef struct
+{
+    double  rho_z;              //density in bin
+    double  press[6];         //inst. pressure
+    double  avg_rho_z;          //density avg.
+    double  avg_press[6];     //avg. pressure
+    double  press_active[6];  //inst. pressure due to self-propulsion
+    double  avg_press_active[6];  //avg. pressure due to self-propulsion
+    int     n;            //No. of particles in bin
+} slabs_z_t;
+
+//Global structure declaration
+slabs_z_t   slabs_z[MAXZBIN];
