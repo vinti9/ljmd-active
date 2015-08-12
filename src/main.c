@@ -569,7 +569,7 @@ void integrate_euler()
         ynew = particle[i].y + C1*(particle[i].fy + Fprop*particle[i].vy)*tstep + C2*gen_gaussian_rand()*sqrt_tstep;
         znew = particle[i].z + C1*(particle[i].fz + Fprop*particle[i].vz)*tstep + C2*gen_gaussian_rand()*sqrt_tstep;
 
-/* disable for passive system testing
+///* disable for passive system testing
         r1 = gen_gaussian_rand();
         r2 = gen_gaussian_rand();
         r3 = gen_gaussian_rand();
@@ -583,11 +583,22 @@ void integrate_euler()
         vxnew = vxnew*vvi;                          //make unit vector
         vynew = vynew*vvi;                          //make unit vector
         vznew = vznew*vvi;                          //make unit vector
-*/
+//*/
         particle[i].x = xnew;
         particle[i].y = ynew;
         particle[i].z = znew;
         pbc(i);
+        particle[i].vx = vxnew;
+        particle[i].vy = vynew;
+        particle[i].vz = vznew;
+       
+        //Update system velocity and Kinetic energy
+        sumv[0]  += vv*vxnew;
+        sumv[1]  += vv*vynew;
+        sumv[2]  += vv*vznew;
+        sumv2[0] += vv*vv*vxnew*vxnew;
+        sumv2[1] += vv*vv*vynew*vynew;
+        sumv2[2] += vv*vv*vznew*vznew;
     }
     
     //Update Total Energy & Temp
@@ -598,7 +609,8 @@ void integrate_euler()
     // Pressure as per virial equation
     for (s=0; s<6; s++)
     {   
-        pressure[s] = (Npart*Temp + pressure[s])*volumei ;
+        //pressure[s] = (Npart*Temp + pressure[s])*volumei;
+        pressure[s] = (Npart/beta + pressure[s])*volumei;
         avg_press[s] = avg_press[s] + pressure[s];
     }
     
@@ -736,9 +748,10 @@ void sample()
         write_traj(0); //Write trajectory of particle 0
         measure_rho_z();
 #ifdef MEASURE_PRESSURE
+//        measure_press_z();
+        //measure_active_press_z();
         //Write pressure tensor to file;
         write_pressure();
-//        measure_press_z();
 #endif
     }
 
@@ -749,7 +762,7 @@ void sample()
     }
 #endif
 
-    if(step%10000 ==0)  //every 10^4 steps
+    if(step%100000 ==0)  //every 10^5 steps
     {
         write_pos(1);           //write conf in xyz format
     }
