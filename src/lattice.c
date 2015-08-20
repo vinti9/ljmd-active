@@ -94,11 +94,11 @@ void init_lattice_slab(int lattice, double x0, double y0, double z0, double xlen
         atpos[3][2] = 0.5;
        
         i = 0;
-        for (iz=0;(iz*zgrid)<zlen;iz++)
+        for (iz=0;iz<nz;iz++)
         {
-            for(ix=0;(ix*xgrid)<xlen;ix++)
+            for(ix=0;ix<nx;ix++)
             {
-                for(iy=0;(iy*ygrid<ylen);iy++)
+                for(iy=0;iy<ny;iy++)
                 { 
                     for (l = 0; l<4; l++)
                     {
