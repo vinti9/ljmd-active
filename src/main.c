@@ -44,7 +44,7 @@ FILE *prop_file;
 FILE *pos_file;
 FILE *traj_file;
 FILE *press_file;
-//FILE *test_file;
+FILE *out_file;
 
 //Initialization of all global parameters
 void initialize()
@@ -72,7 +72,7 @@ void initialize()
     dummy = fscanf(prm_file,"%s %d",str,&continu);
     dummy = fscanf(prm_file,"%s %d",str,&lattice);
     dummy = fscanf(prm_file,"%s %lf %lf %lf",str,&Lx,&Ly,&Lz);
-    dummy = fscanf(prm_file,"%s %d",str,&save);
+    dummy = fscanf(prm_file,"%s %d",str,&print);
     fclose(prm_file);
 
     dsfmt_init_gen_rand(&dsfmt,seed);
@@ -310,9 +310,9 @@ void partforce(int i, int j)
                     slabs_z[ibin].press[0] = slabs_z[ibin].press[0] + ff*xr*xr;   //Pxx
                     slabs_z[ibin].press[1] = slabs_z[ibin].press[1] + ff*yr*yr;   //Pyy
                     slabs_z[ibin].press[2] = slabs_z[ibin].press[2] + ff*zr*zr;   //Pzz
-                    slabs_z[ibin].press[3] = slabs_z[ibin].press[3] + ff*xr*yr;   //Pxy
-                    slabs_z[ibin].press[4] = slabs_z[ibin].press[4] + ff*yr*zr;   //Pyz
-                    slabs_z[ibin].press[5] = slabs_z[ibin].press[5] + ff*zr*xr;   //Pzx
+                    //slabs_z[ibin].press[3] = slabs_z[ibin].press[3] + ff*xr*yr;   //Pxy
+                    //slabs_z[ibin].press[4] = slabs_z[ibin].press[4] + ff*yr*zr;   //Pyz
+                    //slabs_z[ibin].press[5] = slabs_z[ibin].press[5] + ff*zr*xr;   //Pzx
                 }
                 else                            //add (1/n)th contribution to all the slabs in between the particle pair
                 {
@@ -359,9 +359,9 @@ void partforce(int i, int j)
                         slabs_z[pz].press[0] = slabs_z[pz].press[0] + ff*xr*xr*nzi;   //Pxx
                         slabs_z[pz].press[1] = slabs_z[pz].press[1] + ff*yr*yr*nzi;   //Pyy
                         slabs_z[pz].press[2] = slabs_z[pz].press[2] + ff*zr*zr*nzi;   //Pzz
-                        slabs_z[pz].press[3] = slabs_z[pz].press[3] + ff*xr*yr*nzi;   //Pxy
-                        slabs_z[pz].press[4] = slabs_z[pz].press[4] + ff*yr*zr*nzi;   //Pyz
-                        slabs_z[pz].press[5] = slabs_z[pz].press[5] + ff*zr*xr*nzi;   //Pzx
+                        //slabs_z[pz].press[3] = slabs_z[pz].press[3] + ff*xr*yr*nzi;   //Pxy
+                        //slabs_z[pz].press[4] = slabs_z[pz].press[4] + ff*yr*zr*nzi;   //Pyz
+                        //slabs_z[pz].press[5] = slabs_z[pz].press[5] + ff*zr*xr*nzi;   //Pzx
                     }
                 }
             }
@@ -629,7 +629,7 @@ void integrate_euler()
         //        avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
         //    }
         //}
-        measure_press_z();
+        /*measure_press_z();*/
     }
 #endif
     
@@ -717,7 +717,7 @@ void integrate()
         //        avg_press_z[p][q] = avg_press_z[p][q] + press_z[p][q];
         //    }
         //}
-        measure_press_z();
+        /*measure_press_z();*/
     }
 #endif
 
@@ -728,32 +728,39 @@ void integrate()
 void sample()
 {
     int i=0;
-//    printf ("TotalEnergy\t E/Npart \t Temp");
-//    printf ("Step=%5d,\tEtot= %.3e,\ten/npart= %.3e,\tEtot/npart= %.3e,\tTemp= %.3e,\tCOMv=%.3e\n",step,etot,(en/Npart),(etot/Npart),Temp,(sumv[0]+sumv[1]+sumv[2])/Npart);
+    int freq_z = 100;            //Frequency for measuring z-profile values
 
     //Calculate averages
     Av[0] += (en/Npart);
     Av[1] += (etot/Npart);
     Av[2] += Temp;
-//    Av[3] += (pressure[0] + pressure[1] + pressure[2])/3.0;
-    Av[3] += (avg_press[0]+avg_press[1]+avg_press[2])/step/3.0;
+    Av[3] += ONEOVER3*(avg_press[0]+avg_press[1]+avg_press[2])/step;
+    //Av[4] += sqrt(sqr(sumv[0])+sqr(sumv[1])+sqr(sumv[2]));
     Av[5] += 1;             //Counter for running average
 
     //Print out the current average every 100 steps
     if(step%100 == 0)
     {
-//        printf ("%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e \tCOMv= %+.3e\n",step,Av[0]/step,Av[1]/step,Av[2]/step,(sumv[0]+sumv[1]+sumv[2])/Npart);
+        fprintf (out_file,"%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e Pr= %.3e \tCOMv= %+.3e\n",step,Av[0]/Av[5],Av[1]/Av[5],Av[2]/Av[5], Av[3]/Av[5],sqrt(sqr(sumv[0])+sqr(sumv[1])+sqr(sumv[2]))/Npart);
         printf ("%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e Pr= %.3e \tCOMv= %+.3e\n",step,Av[0]/Av[5],Av[1]/Av[5],Av[2]/Av[5], Av[3]/Av[5],(sumv[0]+sumv[1]+sumv[2])/Npart);
         for(i=0;i<6;i++)
         {
             Av[i]=0;
         }
         write_traj(0); //Write trajectory of particle 0
-        measure_rho_z();
-#ifdef MEASURE_PRESSURE
+//        measure_rho_z();
+//#ifdef MEASURE_PRESSURE
 //        measure_press_z();
-        //measure_active_press_z();
-        //Write pressure tensor to file;
+//        //measure_active_press_z();
+//        //Write pressure tensor to file;
+//        write_pressure();
+//#endif
+    }
+
+    if(step%freq_z == 0)
+    {
+        measure_rho_z();
+        measure_press_z();
         write_pressure();
 #endif
     }
@@ -765,7 +772,7 @@ void sample()
     }
 #endif
 
-    if(step%100000 ==0)  //every 10^5 steps
+    if(step%print == 0)
     {
         write_pos(1);           //write conf in xyz format
     }
@@ -780,8 +787,10 @@ void sample()
 void write_pressure()
 {
     int p = 0;
-    double Pr = (avg_press[0] + avg_press[1] + avg_press[2])/3.0;
-    fprintf(press_file,"%+.3e %+.3e %+.3e %+.3e %+.3e %+.3e %+.3e\n",Pr/step, avg_press[0]/step,avg_press[1]/step,avg_press[2]/step,avg_press[3]/step,avg_press[4]/step,avg_press[5]/step);
+    double Pr = ONEOVER3*(avg_press[0] + avg_press[1] + avg_press[2]);
+    fprintf(press_file,"%+.3e %+.3e %+.3e %+.3e %+.3e %+.3e %+.3e ",Pr/step, avg_press[0]/step,avg_press[1]/step,avg_press[2]/step,avg_press[3]/step,avg_press[4]/step,avg_press[5]/step);
+    //fprintf(press_file,"%+.3e %+.3e %+.3e %+.3e\n",ONEOVER6*friction_coeff*Npart*Fprop*Fprop*volumei/rot_diff_coeff,ONEOVER6*(Fprop*avg_fdotv[0]/step/rot_diff_coeff)*volumei,ONEOVER6*(Fprop*avg_fdotv[1]/step/rot_diff_coeff)*volumei,ONEOVER6*(Fprop*avg_fdotv[2]/step/rot_diff_coeff)*volumei);
+    fprintf(press_file,"%+.3e %+.3e %+.3e %+.3e\n",friction_coeff*Npart*Fprop*Fprop*volumei/rot_diff_coeff,(Fprop*avg_fdotv[0]/step/rot_diff_coeff)*volumei,(Fprop*avg_fdotv[1]/step/rot_diff_coeff)*volumei,(Fprop*avg_fdotv[2]/step/rot_diff_coeff)*volumei);
     
     //Reinitialize avg_stress tensor to 0.0 to measure avg. of only last 's' steps
     for (p =0; p<6; p++)
@@ -882,7 +891,7 @@ void read_conf()
 //Write the coordinates of the particles to a file
 void write_pos(int mode)
 {
-    static int save_count = 0;
+    static int print_count = 0;
     char filename[255];
     int i=0;
 
@@ -904,7 +913,7 @@ void write_pos(int mode)
     {
 
         //Write particle configuration in standard xyz format
-        sprintf(filename,"pos_%.05i.xyz",++save_count);
+        sprintf(filename,"pos_%.05i.xyz",++print_count);
         FILE *conf_file;
         conf_file = fopen(filename,"w");
         fprintf(conf_file,"%i\n",Npart);
@@ -939,7 +948,7 @@ void main()
     traj_file   = fopen("traj.dat","w");
     press_file  = fopen("press.dat","w");
     prop_file   = fopen("prop.dat","w");
-    //test_file   = fopen("test.dat","w");
+    out_file    = fopen("out.dat","w");
 
     printf("Begin Initialization\n");
     initialize();
@@ -1001,6 +1010,7 @@ void main()
     fclose(prop_file);
     fclose(traj_file);
     //fclose(test_file);
+    fclose(out_file);
     
     //Compute total time taken for the simulation run
     time_diff = clock() - start;

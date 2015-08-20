@@ -4,12 +4,14 @@
 #define MEASURE_PRESSURE     //Switch to enable Pressure measurement 
 
 #define MAXNPART 5100
+#define ONEOVER3 0.3333333333
+#define ONEOVER6 0.1666666667
 
 #define sqr(x) ((x)*(x))
 #define cube(x) ((x)*(x)*(x))
 
 //Global variable Declarations
-double  time;
+//double  time;
 double  tstep;
 double  tstep2;                 //sqr of timestep
 double  tstepi;                 //inverse of timestep
@@ -41,7 +43,7 @@ double  Av[6];                  //Array storing average values of properties
 int     continu;                //parameter indicating a continuing simulation run or starting fresh
 int     lattice;                //parameter indicating type of lattice(random/cubic/bcc...etc) for initialization
 int     mode;                   //Mode = 0: Equilibration/ 1: Production
-int     save;                   //Frequency of saving data to prop.dat
+int     print;                   //Frequency of printing data to prop.dat
 
 //Variables for brownian dynamics
 double  friction_coeff;                  //friction coefficient = gamma
