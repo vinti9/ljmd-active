@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
-//#include <time.h>
+#include <time.h>
 #include "dSFMT.h"      //for Random Number generator
 #include "params.h"
 #include "cell.h"
@@ -44,6 +44,7 @@ FILE *prop_file;
 FILE *pos_file;
 FILE *traj_file;
 FILE *press_file;
+//FILE *test_file;
 
 //Initialization of all global parameters
 void initialize()
@@ -76,7 +77,7 @@ void initialize()
 
     dsfmt_init_gen_rand(&dsfmt,seed);
 
-    time = 0;
+    //time = 0;
     step = 0;
     tstep2 = tstep*tstep;
     tstepi = 1/tstep;
@@ -209,14 +210,14 @@ void force_nlist()
         pressure[s]=0.0;
     }
     
-//    for(p=0; p<nzbin; p++)
-//    {
-//        for(q=0; q<6; q++)
-//        {
-//            press_z[p][q] = 0.0;
-////            avg_press_z[p][q] = 0.0;
-//        }
-//    }    
+    for(p=0; p<nzbin; p++)
+    {
+        for(q=0; q<6; q++)
+        {
+            slabs_z[p].press[q] = 0.0;
+//            avg_press_z[p][q] = 0.0;
+        }
+    }    
 
     en = 0.0;           //Initialize potential energy to zero for the MD step
 
@@ -381,11 +382,13 @@ void partforce(int i, int j)
     {
         if (step%1000 == 0)     //Every 1000 steps, measure rdf
         {
-            r = sqrt(r2);
-            if (r<box.xhalf)
-            {
-                g[(int)(r/delg)] += 2;
-            }
+            //r = sqrt(r2);
+            //if (r<box.xhalf)
+            //{
+            //    g[(int)(r/delg)] += 2;
+            //}
+            //ngr++;
+            /*rdf(1);*/
         }
     }
 #endif
@@ -758,7 +761,7 @@ void sample()
 #ifdef MEASURE_RDF
     if(step%1000 == 0)
     {
-        ngr +=1;
+        //ngr +=1;
     }
 #endif
 
@@ -931,11 +934,12 @@ void write_traj(int i)
 void main()
 {
     int p;
-    
+    clock_t start = clock(), time_diff;          //Start time of program
 
     traj_file   = fopen("traj.dat","w");
     press_file  = fopen("press.dat","w");
     prop_file   = fopen("prop.dat","w");
+    //test_file   = fopen("test.dat","w");
 
     printf("Begin Initialization\n");
     initialize();
@@ -951,6 +955,8 @@ void main()
     mode = 0;
     while (step<nsteps_equil)
     {
+        
+        step += 1;
 #ifdef USE_NLIST
         force_nlist();
 #else
@@ -959,7 +965,6 @@ void main()
         integrate_euler();
         //integrate();
 //        time = time + tstep;
-        step += 1;
 //        sample();
     }
 
@@ -969,6 +974,8 @@ void main()
     step = 0;
     while (step<nsteps)
     {
+        step += 1;
+
 #ifdef USE_NLIST
         force_nlist();
 #else
@@ -976,9 +983,8 @@ void main()
 #endif
         integrate_euler();
         //integrate();
-        time = time + tstep;
-        step += 1;
-
+        //time = time + tstep;
+        
         sample();
         
         if(step%1000 == 0)
@@ -994,5 +1000,11 @@ void main()
     
     fclose(prop_file);
     fclose(traj_file);
+    //fclose(test_file);
+    
+    //Compute total time taken for the simulation run
+    time_diff = clock() - start;
+    int msec = time_diff*1000 / CLOCKS_PER_SEC;
+    printf("Time taken %d minutes %d seconds %d milliseconds\n", (msec/1000/60), (msec%60000)/1000, msec%1000);
 }
 

@@ -68,15 +68,15 @@ void rdf(int mode)
     }
     else if (mode==2)
     {
-        fp = fopen("gr.dat","a");
+        fp = fopen("gr.dat","w");
         fprintf(fp,"#No. of evaluations %d \n",ngr);
         for (i=0; i<nbin_gr; i++)
         {
             r = delg*(i+0.5);
             vb = (cube(i+1)-cube(i))*cube(delg);
             nideal = (4.0/3.0)*3.14159*vb*density;
-            g[i] = g[i]/(ngr*Npart*nideal);
-            fprintf(fp," %3d %.3f %.3f \n",i,r,g[i]);
+            //g[i] = g[i]/(ngr*Npart*nideal);
+            fprintf(fp," %3d %.3f %.3f \n",i,r,g[i]/(ngr*Npart*nideal));
         }
         fprintf(fp,"\n");
         fclose(fp);
