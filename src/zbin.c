@@ -8,7 +8,8 @@
 //Calculate the bin id acording to coordinates
 int coords2zbin(double z)
 {
-    return ((int)((z+box.zhalf)*dzbini) % nzbin);
+    //return ((int)((z+box.zhalf)*dzbini) % nzbin);
+    return ((int)(nzbin*(z+box.zhalf)*box.zleni) % nzbin);
 }
 
 //Update particle zbin
