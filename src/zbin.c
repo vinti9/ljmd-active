@@ -4,6 +4,7 @@
 #include "params.h"
 #include "zbin.h"
 
+//FILE *test_file;
 
 //Calculate the bin id acording to coordinates
 int coords2zbin(double z)
@@ -46,21 +47,40 @@ void init_zbins()
     vzbin = box.xlen*box.ylen*dzbin;
     vzbini = 1.0/vzbin;
     
-    for(j=0; j<nzbin; j++)
+    //if(continu==0)
     {
-        for(k=0; k<6; k++)
+        for(j=0; j<nzbin; j++)
         {
-            slabs_z[j].press[k] = 0.0;
-            slabs_z[j].avg_press[k] = 0.0;
-            slabs_z[j].press_active[k] = 0.0;
-            slabs_z[j].avg_press_active[k] = 0.0;
+            for(k=0; k<6; k++)
+            {
+                slabs_z[j].press[k] = 0.0;
+                slabs_z[j].avg_press[k] = 0.0;
+                slabs_z[j].press_active[k] = 0.0;
+                slabs_z[j].avg_press_active[k] = 0.0;
                 slabs_z[j].avg_vdotr[k] = 0.0;
                 slabs_z[j].avg_fdotv[k] = 0.0;
+            }
+            slabs_z[j].n = 0;
+            slabs_z[j].rho_z = 0.0;
+            slabs_z[j].avg_rho_z = 0.0;
         }
-        slabs_z[j].n = 0;
-        slabs_z[j].rho_z = 0.0;
-        slabs_z[j].avg_rho_z = 0.0;
     }
+    //else if(continu==1)
+    //{
+    //    read_zbin();
+    //    for(j=0; j<nzbin; j++)
+    //    {
+    //        for(k=0; k<6; k++)
+    //        {
+    //            slabs_z[j].press[k] = 0.0;
+    //            slabs_z[j].press_active[k] = 0.0;
+    //            slabs_z[j].avg_fdotv[k] = 0.0;
+    //        }
+    //        slabs_z[j].n = 0;
+    //        slabs_z[j].rho_z = 0.0;
+    //    }
+    //}
+    
     
     for (i=0; i<Npart; i++)
     {
@@ -108,6 +128,11 @@ void measure_press_z()
         }
     }
     measure_active_press_z();
+    
+    //test_file   = fopen("test.dat","a");
+    //fprintf(test_file," %+.3e %+.3e %+.3e",slabs_z[48].press[0],slabs_z[48].press[1],slabs_z[48].press[2]);
+    //fprintf(test_file,"\t%+.3e %+.3e %+.3e\n",slabs_z[48].press_active[0],slabs_z[48].press_active[1],slabs_z[48].press_active[2]);
+    //fclose(test_file);
 }
 
 //Measure active pressure as per z bins
@@ -183,7 +208,7 @@ void measure_active_press_z()
         slabs_z[p].avg_fdotv[0] += fdotv_z[p][0];
         slabs_z[p].avg_fdotv[1] += fdotv_z[p][1];
         slabs_z[p].avg_fdotv[2] += fdotv_z[p][2];
-        
+             
         if(slabs_z[p].n > 0)
         {
             //vprop_z[p][0] = v0_z[p][0]*Fprop/(slabs_z[p].n*friction_coeff;
@@ -235,6 +260,8 @@ void measure_active_press_z()
         slabs_z[p].avg_press_active[1] += slabs_z[p].press_active[1];
         slabs_z[p].avg_press_active[2] += slabs_z[p].press_active[2];
     }
+    //fprintf(test_file," %+.3e %+.3e %+.3e %+.3e %+.3e %+.3e",v0_z[31][0],v0_z[31][1],v0_z[31][2],v02_z[31][0],v02_z[31][1],v02_z[31][2]);
+    //fprintf(test_file," %+.3e %+.3e %+.3e\n",sqrt(sqr(v0_z[31][0])+sqr(v0_z[31][1])+sqr(v0_z[31][2])),sqrt(sqr(v0_z[32][0])+sqr(v0_z[32][1])+sqr(v0_z[32][2])),sqrt(sqr(v0_z[33][0])+sqr(v0_z[33][1])+sqr(v0_z[33][2])));
 }
 
 //Write density profile as per z bins
@@ -266,6 +293,50 @@ void write_press_z()
         fprintf(fp,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_press[0]*100/step,slabs_z[bin].avg_press[1]*100/step,slabs_z[bin].avg_press[2]*100/step);
         fprintf(fp,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_press_active[0]*100/step,slabs_z[bin].avg_press_active[1]*100/step,slabs_z[bin].avg_press_active[2]*100/step);
 //        fprintf(fp,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_fdotv[0]*100/step,slabs_z[bin].avg_fdotv[1]*100/step,slabs_z[bin].avg_fdotv[2]*100/step);
+    }
+    fclose(fp);
+}
+
+
+//Write Pressure and density profile snapshot along z bins
+//The properties are cumulative averages till time step
+void save_z_snap()
+{
+    static int snap_count = 0;
+    int bin;
+    char filename[20];
+    
+    sprintf(filename,"snap_%.05i.dat",++snap_count);
+    FILE *fp;
+    fp = fopen(filename,"w");
+    for(bin=0; bin<nzbin; bin++)
+    {
+        fprintf(fp,"%4d %+.3e",bin,(dzbin*bin-box.zhalf));
+        fprintf(fp,"\t%+.5e",slabs_z[bin].avg_rho_z*100/step);
+        fprintf(fp,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_press[0]*100/step,slabs_z[bin].avg_press[1]*100/step,slabs_z[bin].avg_press[2]*100/step);
+        fprintf(fp,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_press_active[0]*100/step,slabs_z[bin].avg_press_active[1]*100/step,slabs_z[bin].avg_press_active[2]*100/step);
+    }
+    fclose(fp);
+}
+
+//Read old configuration file and load avg. properties for the slabs
+void read_zbin()
+{
+    int dummy = 0;
+    int i = 0;
+    int j = 0;
+    double d1,d2,d3;
+    FILE *fp;
+    fp = fopen("press_z.dat","r");   
+    while(dummy!=EOF && j<MAXZBIN)
+    {
+        dummy = fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf",&i,&d1,&slabs_z[i].avg_rho_z,&slabs_z[i].avg_press[0],&slabs_z[i].avg_press[1],&slabs_z[i].avg_press[2],\
+                       &slabs_z[i].avg_press_active[0],&slabs_z[i].avg_press_active[1],&slabs_z[i].avg_press_active[2]);
+        j++;
+    }
+    if(j>=MAXZBIN)
+    {
+        printf("Error!: check z-conf file bins=%d\n",j);
     }
     fclose(fp);
 }

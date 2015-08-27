@@ -31,6 +31,7 @@ void    init_box_cuboid(double, double, double);
 double  gen_gaussian_rand();
 void    write_pressure();
 void    read_conf();
+void    eval_vprop();
         
 
 //Global Structure declarations
@@ -876,6 +877,38 @@ double gen_gaussian_rand()
     return u*s;
 }
 
+//
+//Function to evaluate mean propulsion velocity of particle
+//
+//
+void eval_vprop()
+{
+    int i;
+    vprop[0] = 0.0;
+    vprop[1] = 0.0;
+    vprop[2] = 0.0;
+    double v[3];
+    v[0] = 0.0;
+    v[1] = 0.0;
+    v[2] = 0.0;
+    
+    for(i=0; i<Npart; i++)
+    {
+        vprop[0] += Fprop*particle[i].vx + particle[i].fx*particle[i].vx;
+        vprop[1] += Fprop*particle[i].vy + particle[i].fy*particle[i].vy;
+        vprop[2] += Fprop*particle[i].vz + particle[i].fz*particle[i].vz;
+        
+        v[0] += Fprop*particle[i].vx;
+        v[1] += Fprop*particle[i].vy;
+        v[2] += Fprop*particle[i].vz;
+    }
+    vprop[0] = vprop[0]/(Npart*friction_coeff);
+    vprop[1] = vprop[1]/(Npart*friction_coeff);
+    vprop[2] = vprop[2]/(Npart*friction_coeff);
+        
+    //fprintf(test_file," %+.3e %+.3e %+.3e %+.3e %+.3e %+.3e\n",v[0]/Npart,v[1]/Npart,v[2]/Npart,vprop[0],vprop[1],vprop[2]);
+}
+
 //Read old configuration file and load position & velocities
 void read_conf()
 {
@@ -1026,7 +1059,14 @@ void main()
             write_press_z();
             write_pos(0);       //Save last configuration for continuing the simulation run
             rdf(2);             //Save RDF values
+            eval_vprop();
         }
+        if(step%100000 ==0)  //every 10^5 steps
+        {
+            write_pos(1);           //write conf in xyz format
+            save_z_snap();          //Save snapshot of z-profiles of density and pressure
+        }
+
     }
     
     printf("End program\n");
