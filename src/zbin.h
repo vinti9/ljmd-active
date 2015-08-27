@@ -27,6 +27,8 @@ typedef struct
     double  avg_press[6];     //avg. pressure
     double  press_active[6];  //inst. pressure due to self-propulsion
     double  avg_press_active[6];  //avg. pressure due to self-propulsion
+    double  avg_fdotv[6];           //cumulative sum of fdotv[] values, divide by count to get avg. values
+    double  avg_vdotr[6];           //cumulative sum of fdotv[] values, divide by count to get avg. values
     int     n;            //No. of particles in bin
 } slabs_z_t;
 

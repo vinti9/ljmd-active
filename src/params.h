@@ -35,9 +35,11 @@ double  volumei;                //Inverse of volume
 double  epsilon;                //interaction term for LJ potential
 double  rot_diff_coeff;         //Rotational diff. coeff.
 double  Fprop;                  //self-propulsion force
+double  vprop[3];
 
 double  pressure[6];
 double  avg_press[6];
+double  avg_fdotv[6];           //Cumulative sum of fdotv[], divide by count to get avg. value
 double  Av[6];                  //Array storing average values of properties
 
 int     continu;                //parameter indicating a continuing simulation run or starting fresh

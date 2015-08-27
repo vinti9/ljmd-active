@@ -147,6 +147,7 @@ void initialize()
     for (p =0; p<6; p++)
     {
         avg_press[p] = 0.0;
+        avg_fdotv[p] = 0.0;
     }
     
     //initialize running averages to zero
@@ -339,7 +340,8 @@ void partforce(int i, int j)
                     for (dz=0; dz<nz ; dz++)
                     {
                         //pz = low_bin + dz;
-                        pz = (low_bin + dz)%nzbin;               //Periodic images of z-bin
+                        //pz = (low_bin + dz)%nzbin;               //Periodic images of z-bin
+                        pz = (low_bin+dz)>=nzbin ? (low_bin+dz)-nzbin : (low_bin+dz);               //Periodic images of z-bin
                         if (pz == low_bin)
                         {
                             nzi = (((pz+1)*dzbin - box.zhalf) - low_z)/zr;
@@ -368,7 +370,6 @@ void partforce(int i, int j)
         }
       
 #endif 
-
         //Update the system potential energy
         en = en + 4*epsilon*beta*r6i*(r6i-1) - ecut;
         //en = en + 4*epsilon*r6i*(r6i-1) - ecut;
@@ -562,6 +563,9 @@ void integrate_euler()
     sumv[0]=0;sumv[1]=0;sumv[2]=0;
     sumv2[0]=0;sumv2[1]=0;sumv2[2]=0;
     int p,q;
+    double fdotv[6];
+    fdotv[0]=0.0;fdotv[1]=0.0;fdotv[2]=0.0;
+    fdotv[3]=0.0;fdotv[4]=0.0;fdotv[5]=0.0; //dummy
 
     for (i=0; i<Npart ; i++)
     {
@@ -602,6 +606,13 @@ void integrate_euler()
         sumv2[0] += vv*vv*vxnew*vxnew;
         sumv2[1] += vv*vv*vynew*vynew;
         sumv2[2] += vv*vv*vznew*vznew;
+        
+#ifdef MEASURE_PRESSURE
+        fdotv[0] +=  particle[i].fx*particle[i].vx;
+        fdotv[1] +=  particle[i].fy*particle[i].vy;
+        fdotv[2] +=  particle[i].fz*particle[i].vz;
+#endif
+
     }
     recenter_com();
     
@@ -613,9 +624,21 @@ void integrate_euler()
     // Pressure as per virial equation
     for (s=0; s<6; s++)
     {   
+        if(s<3)
+        {
         //pressure[s] = (Npart*Temp + pressure[s])*volumei;
-        pressure[s] = (Npart/beta + pressure[s])*volumei;
+            avg_fdotv[s] = avg_fdotv[s] + fdotv[s];                 //avg_fdotv is the cumulative sum, divide by count to take avg.
+            //pressure[s] = (Npart/beta + pressure[s] + friction_coeff*Fprop*avg_fdotv[s]/step)*volumei;
+            //pressure[s] = (Npart/beta + pressure[s] + 0.5*(friction_coeff*Npart*Fprop*Fprop + Fprop*avg_fdotv[s]/step)/rot_diff_coeff)*volumei;
+            pressure[s] = (Npart/beta + pressure[s] + (friction_coeff*Npart*Fprop*Fprop + Fprop*avg_fdotv[s]/step)/rot_diff_coeff)*volumei;
+        }
+        else
+        {
+            //pressure[s] = (Npart/beta + pressure[s])*volumei;
+            pressure[s] = pressure[s]*volumei;
+        }
         avg_press[s] = avg_press[s] + pressure[s];
+        //fprintf(test_file,"%5d %.3f %.3f %.3f %.3f %.3f %.3f\n",step,fdotv[0],fdotv[1],fdotv[2],avg_fdotv[0]/step,avg_fdotv[1]/step,avg_fdotv[2]/step);
     }
     
     //Pressure profile in z-direction
@@ -742,8 +765,8 @@ void sample()
     //Print out the current average every 100 steps
     if(step%100 == 0)
     {
-        fprintf (out_file,"%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e Pr= %.3e \tCOMv= %+.3e\n",step,Av[0]/Av[5],Av[1]/Av[5],Av[2]/Av[5], Av[3]/Av[5],sqrt(sqr(sumv[0])+sqr(sumv[1])+sqr(sumv[2]))/Npart);
-        printf ("%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e Pr= %.3e \tCOMv= %+.3e\n",step,Av[0]/Av[5],Av[1]/Av[5],Av[2]/Av[5], Av[3]/Av[5],(sumv[0]+sumv[1]+sumv[2])/Npart);
+        //fprintf (out_file,"%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e Pr= %.3e \tCOMv= %+.3e\n",step,Av[0]/Av[5],Av[1]/Av[5],Av[2]/Av[5], Av[3]/Av[5],sqrt(sqr(sumv[0])+sqr(sumv[1])+sqr(sumv[2]))/Npart);
+        printf ("%5d \ten/npart= %.3e \tEtot/npart= %.3e \tTemp= %.3e Pr= %.3e \tCOMv= %+.3e\n",step,Av[0]/Av[5],Av[1]/Av[5],Av[2]/Av[5], Av[3]/Av[5],sqrt(sqr(sumv[0])+sqr(sumv[1])+sqr(sumv[2]))/Npart);
         for(i=0;i<6;i++)
         {
             Av[i]=0;
@@ -758,31 +781,27 @@ void sample()
 //#endif
     }
 
-    if(step%freq_z == 0)
+    if(mode == 1)
     {
-        measure_rho_z();
-        measure_press_z();
-        write_pressure();
-#endif
-    }
-
+        if(step%freq_z == 0)
+        {
+            measure_rho_z();
+            measure_press_z();
+            write_pressure();
+        }
+        
 #ifdef MEASURE_RDF
-    if(step%1000 == 0)
-    {
-        //ngr +=1;
-    }
+        if(step%1000 == 0)
+        {
+            //ngr +=1;
+        }
 #endif
-
-    if(step%print == 0)
-    {
-        write_pos(1);           //write conf in xyz format
-    }
-
-    if(step%save == 0)
-    {
-        fprintf (prop_file,"%7d \t%+.3e \t%+.3e \t%+.3e \n",step,(en/Npart),Temp,(pressure[0]+pressure[1]+pressure[2])/3.0);
-    }
     
+        if(step%print == 0)
+        {
+            fprintf (prop_file,"%7d \t%+.3e \t%+.3e \t%+.3e \n",step,(en/Npart),Temp,(pressure[0]+pressure[1]+pressure[2])/3.0);
+        }
+    }    
 }
 
 void write_pressure()
@@ -917,10 +936,10 @@ void write_pos(int mode)
         sprintf(filename,"pos_%.05i.xyz",++print_count);
         FILE *conf_file;
         conf_file = fopen(filename,"w");
-        fprintf(conf_file,"%i\n",Npart);
-        fprintf(conf_file,"%le %le\n",-box.xhalf,box.xhalf);
-        fprintf(conf_file,"%le %le\n",-box.yhalf,box.yhalf);
-        fprintf(conf_file,"%le %le\n",-box.zhalf,box.zhalf);
+        //fprintf(conf_file,"%i\n",Npart);
+        //fprintf(conf_file,"%le %le\n",-box.xhalf,box.xhalf);
+        //fprintf(conf_file,"%le %le\n",-box.yhalf,box.yhalf);
+        //fprintf(conf_file,"%le %le\n",-box.zhalf,box.zhalf);
 
         for (i=0;i<Npart;i++)
         {
@@ -954,9 +973,9 @@ void main()
     printf("Begin Initialization\n");
     initialize();
     printf("Initialized\n");
-    printf("Density=%.3f\n",density);
+    printf("Density=%.3f\n",Npart/volume);
     printf("xmin=%.3f, xmax=%.3f, ymin=%.3f, ymax=%.3f, zmin=%.3f, zmax=%.3f\n",-box.xhalf,box.xhalf,-box.yhalf,box.yhalf,-box.zhalf,box.zhalf);
-    printf("beta=%.3f\n",beta);
+    printf("Temp=%.3f\n",1.0/beta);
     printf("friction_coeff=%.3f\n",friction_coeff);
     printf("beta=%.3f\n",beta);
     printf("epsilon=%.3f\n",epsilon);

@@ -54,6 +54,8 @@ void init_zbins()
             slabs_z[j].avg_press[k] = 0.0;
             slabs_z[j].press_active[k] = 0.0;
             slabs_z[j].avg_press_active[k] = 0.0;
+                slabs_z[j].avg_vdotr[k] = 0.0;
+                slabs_z[j].avg_fdotv[k] = 0.0;
         }
         slabs_z[j].n = 0;
         slabs_z[j].rho_z = 0.0;
@@ -101,7 +103,7 @@ void measure_press_z()
         for(q=0; q<6; q++)
         {
             //press[p][q] = Temp*rho_z[p] + press[p][q]*vzbini;
-            slabs_z[p].press[q] = slabs_z[p].rho_z/beta + slabs_z[p].press[q]*vzbini;
+            slabs_z[p].press[q] = (slabs_z[p].rho_z/beta + slabs_z[p].press[q]*vzbini);
             slabs_z[p].avg_press[q] = slabs_z[p].avg_press[q] + slabs_z[p].press[q];
         }
     }
@@ -113,30 +115,122 @@ void measure_active_press_z()
 {
     int p,bin,i;
     double vdotr[nzbin][3];
+    double fdotv_z[nzbin][3];
+    double v0_z[nzbin][3];
+    double v02_z[nzbin][3];
+    double vprop_z[nzbin][3];
     
     for(p=0; p<nzbin; p++)
     {
+/*
         vdotr[p][0] = 0.0;
         vdotr[p][1] = 0.0;
         vdotr[p][2] = 0.0;
+*/
+///*
+        fdotv_z[p][0] = 0.0;
+        fdotv_z[p][1] = 0.0;
+        fdotv_z[p][2] = 0.0;
+        v0_z[p][0] = 0.0;
+        v0_z[p][1] = 0.0;
+        v0_z[p][2] = 0.0;
+        v02_z[p][0] = 0.0;
+        v02_z[p][1] = 0.0;
+        v02_z[p][2] = 0.0;
+        vprop_z[p][0] = 0.0;
+        vprop_z[p][1] = 0.0;
+        vprop_z[p][2] = 0.0;
+//*/
     }
     
     for(i=0; i<Npart; i++)
     {
         bin = particle[i].zbin;
+/*
         vdotr[bin][0] += particle[i].vx*particle[i].x;
         vdotr[bin][1] += particle[i].vy*particle[i].y;
         vdotr[bin][2] += particle[i].vz*particle[i].z;
+*/
+///*
+        fdotv_z[bin][0] += particle[i].fx*particle[i].vx;
+        fdotv_z[bin][1] += particle[i].fy*particle[i].vy;
+        fdotv_z[bin][2] += particle[i].fz*particle[i].vz;
+        
+        //v0_z[bin][0] += particle[i].vx;
+        //v0_z[bin][1] += particle[i].vy;
+        //v0_z[bin][2] += particle[i].vz;
+        v02_z[bin][0] += sqr(particle[i].vx);
+        v02_z[bin][1] += sqr(particle[i].vy);
+        v02_z[bin][2] += sqr(particle[i].vz);
+//*/        
     }
     
     for(p=0; p<nzbin; p++)
     {
-        //Calculate inst. active pressure
-        slabs_z[p].press_active[0] = friction_coeff*Fprop*vdotr[p][0]*vzbini;
-        slabs_z[p].press_active[1] = friction_coeff*Fprop*vdotr[p][1]*vzbini;
-        slabs_z[p].press_active[2] = friction_coeff*Fprop*vdotr[p][2]*vzbini;
+/*        
+        //Update the stored cumulative sum of vdotr
+        slabs_z[p].avg_vdotr[0] += vdotr[p][0];
+        slabs_z[p].avg_vdotr[1] += vdotr[p][1];
+        slabs_z[p].avg_vdotr[2] += vdotr[p][2];
         
-        //Update the stored cumulative sum 
+        //Calculate inst. active pressure
+        slabs_z[p].press_active[0] = ONEOVER3*friction_coeff*Fprop*slabs_z[p].avg_vdotr[0]*vzbini*100/step;
+        slabs_z[p].press_active[1] = ONEOVER3*friction_coeff*Fprop*slabs_z[p].avg_vdotr[1]*vzbini*100/step;
+        slabs_z[p].press_active[2] = ONEOVER3*friction_coeff*Fprop*slabs_z[p].avg_vdotr[2]*vzbini*100/step;
+*/
+///*
+        //Update the stored cumulative sum of fdotv
+        slabs_z[p].avg_fdotv[0] += fdotv_z[p][0];
+        slabs_z[p].avg_fdotv[1] += fdotv_z[p][1];
+        slabs_z[p].avg_fdotv[2] += fdotv_z[p][2];
+        
+        if(slabs_z[p].n > 0)
+        {
+            //vprop_z[p][0] = v0_z[p][0]*Fprop/(slabs_z[p].n*friction_coeff;
+            //vprop_z[p][1] = v0_z[p][1]*Fprop/(slabs_z[p].n*friction_coeff;
+            //vprop_z[p][2] = v0_z[p][2]*Fprop/(slabs_z[p].n*friction_coeff;
+/*
+            v0_z[p][0] = v0_z[p][0]*Fprop/(slabs_z[p].n*friction_coeff);
+            v0_z[p][1] = v0_z[p][1]*Fprop/(slabs_z[p].n*friction_coeff);
+            v0_z[p][2] = v0_z[p][2]*Fprop/(slabs_z[p].n*friction_coeff);
+*/
+///*
+            v02_z[p][0] = v02_z[p][0]*sqr(Fprop/friction_coeff)/slabs_z[p].n;
+            v02_z[p][1] = v02_z[p][1]*sqr(Fprop/friction_coeff)/slabs_z[p].n;
+            v02_z[p][2] = v02_z[p][2]*sqr(Fprop/friction_coeff)/slabs_z[p].n;
+/*
+            v0_z[p][0] = sqrt(v02_z[p][0]);
+            v0_z[p][1] = sqrt(v02_z[p][1]);
+            v0_z[p][2] = sqrt(v02_z[p][2]);
+*/        
+        }
+
+        //Calculate inst. active pressure
+/*        slabs_z[p].press_active[0] = (ONEOVER6*friction_coeff*Fprop*Fprop*slabs_z[p].n + 0.5*Fprop*slabs_z[p].avg_fdotv[0]*100/step)*vzbini/rot_diff_coeff;
+        slabs_z[p].press_active[1] = (ONEOVER6*friction_coeff*Fprop*Fprop*slabs_z[p].n + 0.5*Fprop*slabs_z[p].avg_fdotv[1]*100/step)*vzbini/rot_diff_coeff;
+        slabs_z[p].press_active[2] = (ONEOVER6*friction_coeff*Fprop*Fprop*slabs_z[p].n + 0.5*Fprop*slabs_z[p].avg_fdotv[2]*100/step)*vzbini/rot_diff_coeff;
+*/
+/*    Using Ps = (0.5*gam*N*v0*v0+0.5*v0*avg_fdotv)/V*Dr
+        slabs_z[p].press_active[0] = (0.5*friction_coeff*vprop_z[p][0]*vprop_z[p][0]*slabs_z[p].n + 0.5*vprop_z[p][0]*slabs_z[p].avg_fdotv[0]*100/step)*vzbini/rot_diff_coeff;
+        slabs_z[p].press_active[1] = (0.5*friction_coeff*vprop_z[p][1]*vprop_z[p][1]*slabs_z[p].n + 0.5*vprop_z[p][1]*slabs_z[p].avg_fdotv[1]*100/step)*vzbini/rot_diff_coeff;
+        slabs_z[p].press_active[2] = (0.5*friction_coeff*vprop_z[p][2]*vprop_z[p][2]*slabs_z[p].n + 0.5*vprop_z[p][2]*slabs_z[p].avg_fdotv[2]*100/step)*vzbini/rot_diff_coeff;
+*/
+/*  v8  Using Ps = 0.5*v0*(N*gam*v0 + avg_fdotv)/V*Dr
+        slabs_z[p].press_active[0] = 0.5*v0_z[p][0]*(friction_coeff*v0_z[p][0]*slabs_z[p].n + slabs_z[p].avg_fdotv[0]*100/step)*vzbini/rot_diff_coeff;
+        slabs_z[p].press_active[1] = 0.5*v0_z[p][1]*(friction_coeff*v0_z[p][1]*slabs_z[p].n + slabs_z[p].avg_fdotv[1]*100/step)*vzbini/rot_diff_coeff;
+        slabs_z[p].press_active[2] = 0.5*v0_z[p][2]*(friction_coeff*v0_z[p][2]*slabs_z[p].n + slabs_z[p].avg_fdotv[2]*100/step)*vzbini/rot_diff_coeff;
+*/
+///* v9    Using Ps = 0.5*(N*gam*v0*v0 + v0*avg_fdotv)/V*Dr
+        slabs_z[p].press_active[0] = 0.5*(friction_coeff*v02_z[p][0]*slabs_z[p].n + Fprop*slabs_z[p].avg_fdotv[0]*100/step/friction_coeff)*vzbini/rot_diff_coeff;
+        slabs_z[p].press_active[1] = 0.5*(friction_coeff*v02_z[p][1]*slabs_z[p].n + Fprop*slabs_z[p].avg_fdotv[1]*100/step/friction_coeff)*vzbini/rot_diff_coeff;
+        slabs_z[p].press_active[2] = 0.5*(friction_coeff*v02_z[p][2]*slabs_z[p].n + Fprop*slabs_z[p].avg_fdotv[2]*100/step/friction_coeff)*vzbini/rot_diff_coeff;
+//*/
+/* v10    Using Ps = 0.5*(N*gam*v0*v0 + v0*avg_fdotv)/V*Dr
+        slabs_z[p].press_active[0] = 0.5*(friction_coeff*v02_z[p][0]*slabs_z[p].n + v0_z[p][0]*slabs_z[p].avg_fdotv[0]*100/step)*vzbini/rot_diff_coeff;
+        slabs_z[p].press_active[1] = 0.5*(friction_coeff*v02_z[p][1]*slabs_z[p].n + v0_z[p][1]*slabs_z[p].avg_fdotv[1]*100/step)*vzbini/rot_diff_coeff;
+        slabs_z[p].press_active[2] = 0.5*(friction_coeff*v02_z[p][2]*slabs_z[p].n + v0_z[p][2]*slabs_z[p].avg_fdotv[2]*100/step)*vzbini/rot_diff_coeff;
+*/
+        //Update the stored cumulative sum of pressure
         slabs_z[p].avg_press_active[0] += slabs_z[p].press_active[0];
         slabs_z[p].avg_press_active[1] += slabs_z[p].press_active[1];
         slabs_z[p].avg_press_active[2] += slabs_z[p].press_active[2];
@@ -167,8 +261,11 @@ void write_press_z()
     for(bin=0; bin<nzbin; bin++)
     {
         fprintf(fp,"%4d %+.3e",bin,(dzbin*bin-box.zhalf));
-        fprintf(fp," %+.3e %+.3e %+.3e %+.3e %+.3e %+.3e",slabs_z[bin].avg_press[0]*100/step,slabs_z[bin].avg_press[1]*100/step,slabs_z[bin].avg_press[2]*100/step,slabs_z[bin].avg_press[3]*100/step,slabs_z[bin].avg_press[4]*100/step,slabs_z[bin].avg_press[5]*100/step);
+//        fprintf(fp," %+.3e",slabs_z[bin].avg_rho_z[0]*100/step);
+        fprintf(fp,"\t%+.3e",slabs_z[bin].avg_rho_z*100/step);
+        fprintf(fp,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_press[0]*100/step,slabs_z[bin].avg_press[1]*100/step,slabs_z[bin].avg_press[2]*100/step);
         fprintf(fp,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_press_active[0]*100/step,slabs_z[bin].avg_press_active[1]*100/step,slabs_z[bin].avg_press_active[2]*100/step);
+//        fprintf(fp,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_fdotv[0]*100/step,slabs_z[bin].avg_fdotv[1]*100/step,slabs_z[bin].avg_fdotv[2]*100/step);
     }
     fclose(fp);
 }
