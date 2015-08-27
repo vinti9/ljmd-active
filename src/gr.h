@@ -7,3 +7,5 @@ double  delg;       //Step size for RDF function
 
 //RDF function
 void rdf(int);
+
+void recenter_com();

@@ -603,6 +603,7 @@ void integrate_euler()
         sumv2[1] += vv*vv*vynew*vynew;
         sumv2[2] += vv*vv*vznew*vznew;
     }
+    recenter_com();
     
     //Update Total Energy & Temp
     etot = (en + 0.5*(sumv2[0]+sumv2[1]+sumv2[2]));
@@ -957,7 +958,9 @@ void main()
     printf("xmin=%.3f, xmax=%.3f, ymin=%.3f, ymax=%.3f, zmin=%.3f, zmax=%.3f\n",-box.xhalf,box.xhalf,-box.yhalf,box.yhalf,-box.zhalf,box.zhalf);
     printf("beta=%.3f\n",beta);
     printf("friction_coeff=%.3f\n",friction_coeff);
+    printf("beta=%.3f\n",beta);
     printf("epsilon=%.3f\n",epsilon);
+    printf("Dr=%.3f\n",rot_diff_coeff);
     printf("Begin Equilibration\n");
 
     //Equilibration
@@ -990,11 +993,13 @@ void main()
 #else
         force();
 #endif
+        
+        sample();
+
         integrate_euler();
         //integrate();
         //time = time + tstep;
         
-        sample();
         
         if(step%1000 == 0)
         {

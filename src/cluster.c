@@ -90,6 +90,40 @@ void rdf(int mode)
 }
 
 
+/* Calculate the center of mass and re-reference the system by
+ * adjusting the particle co-ordinates
+ */
+void recenter_com()
+{
+    int i = 0;
+    double com[3];
+    com[0] = 0.0;
+    com[1] = 0.0;
+    com[2] = 0.0;
+    
+    for (i=0; i<Npart; i++)
+    {
+        com[0] += particle[i].x;
+        com[1] += particle[i].y;
+        com[2] += particle[i].z;
+    }
+    com[0] = com[0]/Npart;
+    com[1] = com[1]/Npart;
+    com[2] = com[2]/Npart;
+    
+    //if(step%1000==0)
+    //{
+    //    printf("comx=%.3f comy=%.3f comz=%.3f\n",com[0],com[1],com[2]);
+    //}
+    
+    for (i=0; i<Npart; i++)
+    {
+        particle[i].x -= com[0];
+        particle[i].y -= com[1];
+        particle[i].z -= com[2];
+    }
+}
+
 
 
 
