@@ -1,7 +1,8 @@
+#include <stdio.h>
 
 #define USE_NLIST       //Switch to use neighbor list 
 #define MEASURE_RDF     //Switch to enable RDF measurement 
-#define MEASURE_PRESSURE     //Switch to enable Pressure measurement 
+#define MEASURE_PRESSURE     //Switch to enable Pressure measurement
 
 #define MAXNPART 5100
 #define ONEOVER3 0.3333333333
@@ -97,3 +98,6 @@ typedef struct box_t
 //Global Variables
 particle_t  particle[MAXNPART];
 box_t       box;
+
+FILE *test_file;
+FILE *snap_file;

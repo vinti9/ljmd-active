@@ -46,6 +46,7 @@ FILE *pos_file;
 FILE *traj_file;
 FILE *press_file;
 FILE *out_file;
+FILE *conf_file;
 
 //Initialization of all global parameters
 void initialize()
@@ -142,6 +143,8 @@ void initialize()
 
     
     ecut = 4*beta*epsilon*(1.0/(pow(rcut,12))-1.0/(pow(rcut,6)));        //calculate ecut
+    //ecut = 4*epsilon*(1.0/(pow(rcut,12))-1.0/(pow(rcut,6)));        //calculate ecut
+
     printf("ecut=%e\n",ecut);
 
     //Initialize stress tensor
@@ -319,7 +322,9 @@ void partforce(int i, int j)
                 else                            //add (1/n)th contribution to all the slabs in between the particle pair
                 {
                     nz = (ibin>jbin) ? (ibin-jbin+1) : (jbin-ibin+1);
-                    if(nz > nzbin/2) { boxcross = 1;} 
+                    //nz = (ibin>jbin) ? (ibin-jbin-1) : (jbin-ibin-1);
+                    if(nz > nzbin/2) { boxcross = 1;}
+                    //if(ibin >= nzbin-1 || ibin <1 || jbin >= nzbin-1 || jbin<1 ) goto skip;
                     //Below if-else to take care for the nearest images of particles
                     if (boxcross == 0)
                     {
@@ -616,7 +621,7 @@ void integrate_euler()
 
     }
     recenter_com();
-    
+        
     //Update Total Energy & Temp
     etot = (en + 0.5*(sumv2[0]+sumv2[1]+sumv2[2]));
     Temp = (sumv2[0]+sumv2[1]+sumv2[2])/(3*Npart);
@@ -627,7 +632,7 @@ void integrate_euler()
     {   
         if(s<3)
         {
-        //pressure[s] = (Npart*Temp + pressure[s])*volumei;
+            //pressure[s] = (Npart*Temp + pressure[s])*volumei;
             avg_fdotv[s] = avg_fdotv[s] + fdotv[s];                 //avg_fdotv is the cumulative sum, divide by count to take avg.
             //pressure[s] = (Npart/beta + pressure[s] + friction_coeff*Fprop*avg_fdotv[s]/step)*volumei;
             //pressure[s] = (Npart/beta + pressure[s] + 0.5*(friction_coeff*Npart*Fprop*Fprop + Fprop*avg_fdotv[s]/step)/rot_diff_coeff)*volumei;
@@ -966,9 +971,10 @@ void write_pos(int mode)
     {
 
         //Write particle configuration in standard xyz format
-        sprintf(filename,"pos_%.05i.xyz",++print_count);
-        FILE *conf_file;
-        conf_file = fopen(filename,"w");
+        //sprintf(filename,"pos_%.05i.xyz",++print_count);
+        //conf_file = fopen(filename,"a");
+        fprintf(conf_file,"%d\n",Npart);
+        fprintf(conf_file,"VMD_XYZ: %d %d\n",++print_count,step);
         //fprintf(conf_file,"%i\n",Npart);
         //fprintf(conf_file,"%le %le\n",-box.xhalf,box.xhalf);
         //fprintf(conf_file,"%le %le\n",-box.yhalf,box.yhalf);
@@ -978,7 +984,7 @@ void write_pos(int mode)
         {
             fprintf(conf_file,"%5d %+.3e %+.3e %+.3e %+0.3e %+0.3e %+0.3e\n",i,particle[i].x,particle[i].y,particle[i].z,particle[i].vx,particle[i].vy,particle[i].vz);
         }
-        fclose(conf_file);
+        //fclose(conf_file);
     }
 
 }
@@ -1002,6 +1008,13 @@ void main()
     press_file  = fopen("press.dat","w");
     prop_file   = fopen("prop.dat","w");
     out_file    = fopen("out.dat","w");
+    test_file   = fopen("snap.dat","w");
+    fclose(test_file);
+    test_file   = fopen("pos.xyz","w");
+    fclose(test_file);
+    
+    snap_file = fopen("snap.dat","a");
+    conf_file = fopen("pos.xyz","a");
 
     printf("Begin Initialization\n");
     initialize();
@@ -1051,14 +1064,14 @@ void main()
         integrate_euler();
         //integrate();
         //time = time + tstep;
-        
+
         
         if(step%1000 == 0)
         {
             write_rho_z();
             write_press_z();
-            write_pos(0);       //Save last configuration for continuing the simulation run
-            rdf(2);             //Save RDF values
+            write_pos(0);       //Print last configuration for continuing the simulation run
+            rdf(2);             //Print RDF values
             eval_vprop();
         }
         if(step%100000 ==0)  //every 10^5 steps
@@ -1075,6 +1088,8 @@ void main()
     fclose(traj_file);
     //fclose(test_file);
     fclose(out_file);
+    fclose(snap_file);
+    fclose(conf_file);
     
     //Compute total time taken for the simulation run
     time_diff = clock() - start;

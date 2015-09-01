@@ -291,8 +291,8 @@ void write_press_z()
 //        fprintf(fp," %+.3e",slabs_z[bin].avg_rho_z[0]*100/step);
         fprintf(fp,"\t%+.3e",slabs_z[bin].avg_rho_z*100/step);
         fprintf(fp,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_press[0]*100/step,slabs_z[bin].avg_press[1]*100/step,slabs_z[bin].avg_press[2]*100/step);
-        fprintf(fp,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_press_active[0]*100/step,slabs_z[bin].avg_press_active[1]*100/step,slabs_z[bin].avg_press_active[2]*100/step);
-//        fprintf(fp,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_fdotv[0]*100/step,slabs_z[bin].avg_fdotv[1]*100/step,slabs_z[bin].avg_fdotv[2]*100/step);
+        fprintf(fp,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_press_active[0]*100/step,slabs_z[bin].avg_press_active[1]*100/step,slabs_z[bin].avg_press_active[2]*100/step);
+        fprintf(fp,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_fdotv[0]*100/step,slabs_z[bin].avg_fdotv[1]*100/step,slabs_z[bin].avg_fdotv[2]*100/step);
     }
     fclose(fp);
 }
@@ -306,17 +306,21 @@ void save_z_snap()
     int bin;
     char filename[20];
     
-    sprintf(filename,"snap_%.05i.dat",++snap_count);
-    FILE *fp;
-    fp = fopen(filename,"w");
+    //sprintf(filename,"snap_%.05i.dat",++snap_count);
+    //sprintf(filename,"snap.dat");    
+    //FILE *fp;
+    //fp = fopen(filename,"w");
+    fprintf(snap_file,"#Snap:%d %d\n",++snap_count,step);
     for(bin=0; bin<nzbin; bin++)
     {
-        fprintf(fp,"%4d %+.3e",bin,(dzbin*bin-box.zhalf));
-        fprintf(fp,"\t%+.5e",slabs_z[bin].avg_rho_z*100/step);
-        fprintf(fp,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_press[0]*100/step,slabs_z[bin].avg_press[1]*100/step,slabs_z[bin].avg_press[2]*100/step);
-        fprintf(fp,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_press_active[0]*100/step,slabs_z[bin].avg_press_active[1]*100/step,slabs_z[bin].avg_press_active[2]*100/step);
+        fprintf(snap_file,"%4d %+.3e",bin,(dzbin*bin-box.zhalf));
+        fprintf(snap_file,"\t%+.5e",slabs_z[bin].avg_rho_z*100/step);
+        fprintf(snap_file,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_press[0]*100/step,slabs_z[bin].avg_press[1]*100/step,slabs_z[bin].avg_press[2]*100/step);
+        fprintf(snap_file,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_press_active[0]*100/step,slabs_z[bin].avg_press_active[1]*100/step,slabs_z[bin].avg_press_active[2]*100/step);
+        fprintf(snap_file,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_fdotv[0]*100/step,slabs_z[bin].avg_fdotv[1]*100/step,slabs_z[bin].avg_fdotv[2]*100/step);
     }
-    fclose(fp);
+    fprintf(snap_file,"\n");
+    //fclose(fp);
 }
 
 //Read old configuration file and load avg. properties for the slabs
@@ -330,8 +334,9 @@ void read_zbin()
     fp = fopen("press_z.dat","r");   
     while(dummy!=EOF && j<MAXZBIN)
     {
-        dummy = fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf",&i,&d1,&slabs_z[i].avg_rho_z,&slabs_z[i].avg_press[0],&slabs_z[i].avg_press[1],&slabs_z[i].avg_press[2],\
-                       &slabs_z[i].avg_press_active[0],&slabs_z[i].avg_press_active[1],&slabs_z[i].avg_press_active[2]);
+        dummy = fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",&i,&d1,&slabs_z[i].avg_rho_z,&slabs_z[i].avg_press[0],&slabs_z[i].avg_press[1],&slabs_z[i].avg_press[2],\
+                       &slabs_z[i].avg_press_active[0],&slabs_z[i].avg_press_active[1],&slabs_z[i].avg_press_active[2],\
+                        &slabs_z[i].avg_fdotv[0],&slabs_z[i].avg_fdotv[1],&slabs_z[i].avg_fdotv[2]);
         j++;
     }
     if(j>=MAXZBIN)
