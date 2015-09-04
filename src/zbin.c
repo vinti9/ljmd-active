@@ -177,9 +177,9 @@ void measure_active_press_z()
         vdotr[bin][2] += particle[i].vz*particle[i].z;
 */
 ///*
-        fdotv_z[bin][0] += particle[i].fx*particle[i].vx;
-        fdotv_z[bin][1] += particle[i].fy*particle[i].vy;
-        fdotv_z[bin][2] += particle[i].fz*particle[i].vz;
+        fdotv_z[bin][0] += particle[i].fx*particle[i].ex;
+        fdotv_z[bin][1] += particle[i].fy*particle[i].ey;
+        fdotv_z[bin][2] += particle[i].fz*particle[i].ez;
         
         //v0_z[bin][0] += particle[i].vx;
         //v0_z[bin][1] += particle[i].vy;

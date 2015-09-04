@@ -75,6 +75,9 @@ typedef struct particle_t
 //    double fxold;
 //    double fyold;
 //    double fzold;
+    double ex;          //Orientation vector
+    double ey;          //Orientation vector
+    double ez;          //Orientation vector
     int    cell;
     int    zbin;
 } particle_t;

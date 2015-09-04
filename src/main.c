@@ -488,6 +488,10 @@ void init_lattice_vel()
         particle[i].vx = (dsfmt_genrand_open_open(&dsfmt)-0.5);
         particle[i].vy = (dsfmt_genrand_open_open(&dsfmt)-0.5);
         particle[i].vz = (dsfmt_genrand_open_open(&dsfmt)-0.5);
+        
+        particle[i].ex = 1.0;
+        particle[i].ey = 0.0;
+        particle[i].ez = 0.0;
     }
 
     for (i=0;i<Npart;i++)
@@ -572,30 +576,39 @@ void integrate_euler()
     double fdotv[6];
     fdotv[0]=0.0;fdotv[1]=0.0;fdotv[2]=0.0;
     fdotv[3]=0.0;fdotv[4]=0.0;fdotv[5]=0.0; //dummy
+    double exnew,eynew,eznew,ee,eei;
+    double g1,g2,g3;
 
     for (i=0; i<Npart ; i++)
     {
 
 // Euler-Maruyama algorithm
+        g1 = gen_gaussian_rand();
+        g2 = gen_gaussian_rand();
+        g3 = gen_gaussian_rand();
         //Calculate the new positions
-        xnew = particle[i].x + C1*(particle[i].fx + Fprop*particle[i].vx)*tstep + C2*gen_gaussian_rand()*sqrt_tstep;
-        ynew = particle[i].y + C1*(particle[i].fy + Fprop*particle[i].vy)*tstep + C2*gen_gaussian_rand()*sqrt_tstep;
-        znew = particle[i].z + C1*(particle[i].fz + Fprop*particle[i].vz)*tstep + C2*gen_gaussian_rand()*sqrt_tstep;
+        xnew = particle[i].x + C1*(particle[i].fx + Fprop*particle[i].ex)*tstep + C2*g1*sqrt_tstep;
+        ynew = particle[i].y + C1*(particle[i].fy + Fprop*particle[i].ey)*tstep + C2*g2*sqrt_tstep;
+        znew = particle[i].z + C1*(particle[i].fz + Fprop*particle[i].ez)*tstep + C2*g3*sqrt_tstep;
 
 ///* disable for passive system testing
         r1 = gen_gaussian_rand();
         r2 = gen_gaussian_rand();
         r3 = gen_gaussian_rand();
 
-        vxnew = particle[i].vx + C3*(particle[i].vy*r3-particle[i].vz*r2)*sqrt_tstep;          //direction update
-        vynew = particle[i].vy + C3*(particle[i].vz*r1-particle[i].vx*r3)*sqrt_tstep;          //direction update
-        vznew = particle[i].vz + C3*(particle[i].vx*r2-particle[i].vy*r1)*sqrt_tstep;          //direction update
-        vv = sqrt(vxnew*vxnew + vynew*vynew + vznew*vznew);
-        vvi = (vv>0) ? 1.0/vv : 0;
+        exnew = particle[i].ex + C3*(particle[i].ey*r3-particle[i].ez*r2)*sqrt_tstep;          //direction update
+        eynew = particle[i].ey + C3*(particle[i].ez*r1-particle[i].ex*r3)*sqrt_tstep;          //direction update
+        eznew = particle[i].ez + C3*(particle[i].ex*r2-particle[i].ey*r1)*sqrt_tstep;          //direction update
+        ee = sqrt(exnew*exnew + eynew*eynew + eznew*eznew);
+        eei = (ee>0) ? 1.0/ee : 0;
 
-        vxnew = vxnew*vvi;                          //make unit vector
-        vynew = vynew*vvi;                          //make unit vector
-        vznew = vznew*vvi;                          //make unit vector
+        exnew = exnew*eei;                          //make unit vector
+        eynew = eynew*eei;                          //make unit vector
+        eznew = eznew*eei;                          //make unit vector
+        
+        vxnew = C1*(particle[i].fx + Fprop*exnew) + C2*g1;
+        vynew = C1*(particle[i].fy + Fprop*eynew) + C2*g2;
+        vznew = C1*(particle[i].fz + Fprop*eznew) + C2*g3;
 //*/
         particle[i].x = xnew;
         particle[i].y = ynew;
@@ -604,19 +617,29 @@ void integrate_euler()
         particle[i].vx = vxnew;
         particle[i].vy = vynew;
         particle[i].vz = vznew;
+        particle[i].ex = exnew;
+        particle[i].ey = eynew;
+        particle[i].ez = eznew;
        
         //Update system velocity and Kinetic energy
-        sumv[0]  += vv*vxnew;
-        sumv[1]  += vv*vynew;
-        sumv[2]  += vv*vznew;
-        sumv2[0] += vv*vv*vxnew*vxnew;
-        sumv2[1] += vv*vv*vynew*vynew;
-        sumv2[2] += vv*vv*vznew*vznew;
+        //sumv[0]  += vv*vxnew;
+        //sumv[1]  += vv*vynew;
+        //sumv[2]  += vv*vznew;
+        //sumv2[0] += vv*vv*vxnew*vxnew;
+        //sumv2[1] += vv*vv*vynew*vynew;
+        //sumv2[2] += vv*vv*vznew*vznew;
+        
+        sumv[0]  += vxnew;
+        sumv[1]  += vynew;
+        sumv[2]  += vznew;
+        sumv2[0] += vxnew*vxnew;
+        sumv2[1] += vynew*vynew;
+        sumv2[2] += vznew*vznew;
         
 #ifdef MEASURE_PRESSURE
-        fdotv[0] +=  particle[i].fx*particle[i].vx;
-        fdotv[1] +=  particle[i].fy*particle[i].vy;
-        fdotv[2] +=  particle[i].fz*particle[i].vz;
+        fdotv[0] +=  particle[i].fx*particle[i].ex;
+        fdotv[1] +=  particle[i].fy*particle[i].ey;
+        fdotv[2] +=  particle[i].fz*particle[i].ez;
 #endif
 
     }
@@ -897,19 +920,19 @@ void eval_vprop()
     v[1] = 0.0;
     v[2] = 0.0;
     
-    for(i=0; i<Npart; i++)
-    {
-        vprop[0] += Fprop*particle[i].vx + particle[i].fx*particle[i].vx;
-        vprop[1] += Fprop*particle[i].vy + particle[i].fy*particle[i].vy;
-        vprop[2] += Fprop*particle[i].vz + particle[i].fz*particle[i].vz;
-        
-        v[0] += Fprop*particle[i].vx;
-        v[1] += Fprop*particle[i].vy;
-        v[2] += Fprop*particle[i].vz;
-    }
-    vprop[0] = vprop[0]/(Npart*friction_coeff);
-    vprop[1] = vprop[1]/(Npart*friction_coeff);
-    vprop[2] = vprop[2]/(Npart*friction_coeff);
+    //for(i=0; i<Npart; i++)
+    //{
+    //    vprop[0] += Fprop*particle[i].vx + particle[i].fx*particle[i].vx;
+    //    vprop[1] += Fprop*particle[i].vy + particle[i].fy*particle[i].vy;
+    //    vprop[2] += Fprop*particle[i].vz + particle[i].fz*particle[i].vz;
+    //    
+    //    v[0] += Fprop*particle[i].vx;
+    //    v[1] += Fprop*particle[i].vy;
+    //    v[2] += Fprop*particle[i].vz;
+    //}
+    //vprop[0] = vprop[0]/(Npart*friction_coeff);
+    //vprop[1] = vprop[1]/(Npart*friction_coeff);
+    //vprop[2] = vprop[2]/(Npart*friction_coeff);
         
     //fprintf(test_file," %+.3e %+.3e %+.3e %+.3e %+.3e %+.3e\n",v[0]/Npart,v[1]/Npart,v[2]/Npart,vprop[0],vprop[1],vprop[2]);
 }
@@ -925,7 +948,7 @@ void read_conf()
     fp = fopen("pos.dat","r");   
     while(j<Npart && i<Npart)
     {
-        dummy = fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf",&i,&particle[j].x,&particle[j].y,&particle[j].z,&particle[j].vx,&particle[j].vy,&particle[j].vz,&particle[j].xold,&particle[j].yold,&particle[j].zold);
+        dummy = fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf",&i,&particle[j].x,&particle[j].y,&particle[j].z,&particle[j].ex,&particle[j].ey,&particle[j].ez,&particle[j].xold,&particle[j].yold,&particle[j].zold);
         j += 1;
     }
     if(i>Npart || j!=Npart)
@@ -961,7 +984,7 @@ void write_pos(int mode)
 //        fprintf(pos_file,"#ID,\tx,\ty,\tz,\tvx,\tvy,\tvz,\tfx,\tfy,\tfz\n");
         for (i=0;i<Npart;i++)
         {
-            fprintf(pos_file,"%5d \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e\n",i,particle[i].x,particle[i].y,particle[i].z,particle[i].vx,particle[i].vy,particle[i].vz,particle[i].xold,particle[i].yold,particle[i].zold);
+            fprintf(pos_file,"%5d \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e \t%+.8e\n",i,particle[i].x,particle[i].y,particle[i].z,particle[i].ex,particle[i].ey,particle[i].ez,particle[i].xold,particle[i].yold,particle[i].zold);
         }
 //      fprintf(pos_file,"#COMvx=%e,\tCOMvy=%e,\tCOMvz=%e\n",sumv[0]/Npart,sumv[1]/Npart,sumv[2]/Npart);
 //      fprintf(pos_file,"\n\nCOMvx=%e,\tCOMvy=%e,\tCOMvz=%e\n",sumv[0],sumv[1],sumv[2]);
@@ -982,7 +1005,7 @@ void write_pos(int mode)
 
         for (i=0;i<Npart;i++)
         {
-            fprintf(conf_file,"%5d %+.3e %+.3e %+.3e %+0.3e %+0.3e %+0.3e\n",i,particle[i].x,particle[i].y,particle[i].z,particle[i].vx,particle[i].vy,particle[i].vz);
+            fprintf(conf_file,"%5d %+.3e %+.3e %+.3e %+0.3e %+0.3e %+0.3e \t%+0.3e %+0.3e %+0.3e\n",i,particle[i].x,particle[i].y,particle[i].z,particle[i].vx,particle[i].vy,particle[i].vz,particle[i].ex,particle[i].ey,particle[i].ez);
         }
         //fclose(conf_file);
     }
@@ -1026,6 +1049,7 @@ void main()
     printf("beta=%.3f\n",beta);
     printf("epsilon=%.3f\n",epsilon);
     printf("Dr=%.3f\n",rot_diff_coeff);
+    printf("Fp=%.3f\n",Fprop);
     printf("Begin Equilibration\n");
 
     //Equilibration
