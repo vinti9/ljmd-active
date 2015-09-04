@@ -1,4 +1,4 @@
-#define MAXZBIN 500
+#define MAXZBIN 300
 
 //Global variable declarations
 int     nzbin;          //No. of bins in z-dir
@@ -6,6 +6,10 @@ double  dzbin;          //Bin width
 double  vzbin;          //Volume of each bin
 double  dzbini;         //dzbin inverse
 double  vzbini;         //vzbin inverse
+double  v0_z[MAXZBIN][3];
+double  v02_z[MAXZBIN][3];
+double  avg_v0_z[MAXZBIN][3];
+double  avg_v02_z[MAXZBIN][3];
 
 
 //Global function declarations

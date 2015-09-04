@@ -47,7 +47,7 @@ void init_zbins()
     vzbin = box.xlen*box.ylen*dzbin;
     vzbini = 1.0/vzbin;
     
-    //if(continu==0)
+    if(continu==0)
     {
         for(j=0; j<nzbin; j++)
         {
@@ -63,23 +63,34 @@ void init_zbins()
             slabs_z[j].n = 0;
             slabs_z[j].rho_z = 0.0;
             slabs_z[j].avg_rho_z = 0.0;
+            avg_v0_z[j][0] = 0.0;
+            avg_v0_z[j][1] = 0.0;
+            avg_v0_z[j][2] = 0.0;
+            avg_v02_z[j][0] = 0.0;
+            avg_v02_z[j][1] = 0.0;
+            avg_v02_z[j][2] = 0.0;
         }
     }
-    //else if(continu==1)
-    //{
-    //    read_zbin();
-    //    for(j=0; j<nzbin; j++)
-    //    {
-    //        for(k=0; k<6; k++)
-    //        {
-    //            slabs_z[j].press[k] = 0.0;
-    //            slabs_z[j].press_active[k] = 0.0;
-    //            slabs_z[j].avg_fdotv[k] = 0.0;
-    //        }
-    //        slabs_z[j].n = 0;
-    //        slabs_z[j].rho_z = 0.0;
-    //    }
-    //}
+    else if(continu==1)
+    {
+        read_zbin();
+        for(j=0; j<nzbin; j++)
+        {
+            for(k=0; k<6; k++)
+            {
+                slabs_z[j].press[k] = 0.0;
+                slabs_z[j].press_active[k] = 0.0;
+            }
+            slabs_z[j].n = 0;
+            slabs_z[j].rho_z = 0.0;
+            avg_v0_z[j][0] = 0.0;
+            avg_v0_z[j][1] = 0.0;
+            avg_v0_z[j][2] = 0.0;
+            avg_v02_z[j][0] = 0.0;
+            avg_v02_z[j][1] = 0.0;
+            avg_v02_z[j][2] = 0.0;
+        }
+    }
     
     
     for (i=0; i<Npart; i++)
@@ -141,8 +152,8 @@ void measure_active_press_z()
     int p,bin,i;
     double vdotr[nzbin][3];
     double fdotv_z[nzbin][3];
-    double v0_z[nzbin][3];
-    double v02_z[nzbin][3];
+    //double v0_z[nzbin][3];
+    //double v02_z[nzbin][3];
     double vprop_z[nzbin][3];
     
     for(p=0; p<nzbin; p++)
@@ -181,12 +192,12 @@ void measure_active_press_z()
         fdotv_z[bin][1] += particle[i].fy*particle[i].ey;
         fdotv_z[bin][2] += particle[i].fz*particle[i].ez;
         
-        //v0_z[bin][0] += particle[i].vx;
-        //v0_z[bin][1] += particle[i].vy;
-        //v0_z[bin][2] += particle[i].vz;
-        v02_z[bin][0] += sqr(particle[i].vx);
-        v02_z[bin][1] += sqr(particle[i].vy);
-        v02_z[bin][2] += sqr(particle[i].vz);
+        v0_z[bin][0] += particle[i].ex;
+        v0_z[bin][1] += particle[i].ey;
+        v0_z[bin][2] += particle[i].ez;
+        v02_z[bin][0] += sqr(particle[i].ex);
+        v02_z[bin][1] += sqr(particle[i].ey);
+        v02_z[bin][2] += sqr(particle[i].ez);
 //*/        
     }
     
@@ -214,11 +225,11 @@ void measure_active_press_z()
             //vprop_z[p][0] = v0_z[p][0]*Fprop/(slabs_z[p].n*friction_coeff;
             //vprop_z[p][1] = v0_z[p][1]*Fprop/(slabs_z[p].n*friction_coeff;
             //vprop_z[p][2] = v0_z[p][2]*Fprop/(slabs_z[p].n*friction_coeff;
-/*
+///*
             v0_z[p][0] = v0_z[p][0]*Fprop/(slabs_z[p].n*friction_coeff);
             v0_z[p][1] = v0_z[p][1]*Fprop/(slabs_z[p].n*friction_coeff);
             v0_z[p][2] = v0_z[p][2]*Fprop/(slabs_z[p].n*friction_coeff);
-*/
+//*/
 ///*
             v02_z[p][0] = v02_z[p][0]*sqr(Fprop/friction_coeff)/slabs_z[p].n;
             v02_z[p][1] = v02_z[p][1]*sqr(Fprop/friction_coeff)/slabs_z[p].n;
@@ -229,6 +240,12 @@ void measure_active_press_z()
             v0_z[p][2] = sqrt(v02_z[p][2]);
 */        
         }
+        avg_v0_z[p][0] += v0_z[p][0];
+        avg_v0_z[p][1] += v0_z[p][1];
+        avg_v0_z[p][2] += v0_z[p][2];
+        avg_v02_z[p][0] += v02_z[p][0];
+        avg_v02_z[p][1] += v02_z[p][1];
+        avg_v02_z[p][2] += v02_z[p][2];
 
         //Calculate inst. active pressure
 /*        slabs_z[p].press_active[0] = (ONEOVER6*friction_coeff*Fprop*Fprop*slabs_z[p].n + 0.5*Fprop*slabs_z[p].avg_fdotv[0]*100/step)*vzbini/rot_diff_coeff;
@@ -292,7 +309,9 @@ void write_press_z()
         fprintf(fp,"\t%+.3e",slabs_z[bin].avg_rho_z*100/step);
         fprintf(fp,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_press[0]*100/step,slabs_z[bin].avg_press[1]*100/step,slabs_z[bin].avg_press[2]*100/step);
         fprintf(fp,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_press_active[0]*100/step,slabs_z[bin].avg_press_active[1]*100/step,slabs_z[bin].avg_press_active[2]*100/step);
-        fprintf(fp,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_fdotv[0]*100/step,slabs_z[bin].avg_fdotv[1]*100/step,slabs_z[bin].avg_fdotv[2]*100/step);
+        fprintf(fp,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_fdotv[0]*100/step,slabs_z[bin].avg_fdotv[1]*100/step,slabs_z[bin].avg_fdotv[2]*100/step);
+        fprintf(fp,"\t%+.3e %+.3e %+.3e",avg_v0_z[bin][0]*100/step,avg_v0_z[bin][1]*100/step,avg_v0_z[bin][2]*100/step);
+        fprintf(fp,"\t%+.3e %+.3e %+.3e\n",avg_v02_z[bin][0]*100/step,avg_v02_z[bin][1]*100/step,avg_v02_z[bin][2]*100/step);
     }
     fclose(fp);
 }
@@ -316,8 +335,10 @@ void save_z_snap()
         fprintf(snap_file,"%4d %+.3e",bin,(dzbin*bin-box.zhalf));
         fprintf(snap_file,"\t%+.5e",slabs_z[bin].avg_rho_z*100/step);
         fprintf(snap_file,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_press[0]*100/step,slabs_z[bin].avg_press[1]*100/step,slabs_z[bin].avg_press[2]*100/step);
-        fprintf(snap_file,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_press_active[0]*100/step,slabs_z[bin].avg_press_active[1]*100/step,slabs_z[bin].avg_press_active[2]*100/step);
-        fprintf(snap_file,"\t%+.3e %+.3e %+.3e\n",slabs_z[bin].avg_fdotv[0]*100/step,slabs_z[bin].avg_fdotv[1]*100/step,slabs_z[bin].avg_fdotv[2]*100/step);
+        fprintf(snap_file,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_press_active[0]*100/step,slabs_z[bin].avg_press_active[1]*100/step,slabs_z[bin].avg_press_active[2]*100/step);
+        fprintf(snap_file,"\t%+.3e %+.3e %+.3e",slabs_z[bin].avg_fdotv[0]*100/step,slabs_z[bin].avg_fdotv[1]*100/step,slabs_z[bin].avg_fdotv[2]*100/step);
+        fprintf(snap_file,"\t%+.3e %+.3e %+.3e",avg_v0_z[bin][0]*100/step,avg_v0_z[bin][1]*100/step,avg_v0_z[bin][2]*100/step);
+        fprintf(snap_file,"\t%+.3e %+.3e %+.3e\n",avg_v02_z[bin][0]*100/step,avg_v02_z[bin][1]*100/step,avg_v02_z[bin][2]*100/step);
     }
     fprintf(snap_file,"\n");
     //fclose(fp);
@@ -334,7 +355,7 @@ void read_zbin()
     fp = fopen("press_z.dat","r");   
     while(dummy!=EOF && j<MAXZBIN)
     {
-        dummy = fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",&i,&d1,&slabs_z[i].avg_rho_z,&slabs_z[i].avg_press[0],&slabs_z[i].avg_press[1],&slabs_z[i].avg_press[2],\
+        dummy = fscanf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %*f %*f %*f %*f %*f %*f",&i,&d1,&slabs_z[i].avg_rho_z,&slabs_z[i].avg_press[0],&slabs_z[i].avg_press[1],&slabs_z[i].avg_press[2],\
                        &slabs_z[i].avg_press_active[0],&slabs_z[i].avg_press_active[1],&slabs_z[i].avg_press_active[2],\
                         &slabs_z[i].avg_fdotv[0],&slabs_z[i].avg_fdotv[1],&slabs_z[i].avg_fdotv[2]);
         j++;
