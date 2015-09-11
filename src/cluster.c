@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
 #include "gr.h"
 #include "params.h"
 
@@ -27,8 +28,9 @@ void rdf(int mode)
 
     if (mode==0)
     {
-        nbin_gr = 200;          //100 bins used for RDF evaluation
-        delg = max(box.xhalf,box.yhalf,box.zhalf)/nbin_gr;
+        nbin_gr = 200;          //No. of bins used for RDF evaluation
+        //delg = max(box.xhalf,box.yhalf,box.zhalf)/nbin_gr;
+        delg = rcut*2/nbin_gr;
 //        delg = 0.02;
         for (i=0; i<nbin_gr; i++)
         {
@@ -58,9 +60,9 @@ void rdf(int mode)
                 r2 = xr*xr+yr*yr+zr*zr;
                 r = sqrt(r2);
                 
-                if (r < box.xhalf)
+                ig = (int)(r/delg);
+                if(ig<MAXRDFBIN)
                 {
-                    ig = (int)(r/delg);
                     g[ig] = g[ig] + 2;
                 }
             }
@@ -125,7 +127,84 @@ void recenter_com()
 }
 
 
+/* Calculate diffusion coefficients
+ * and autocorrelation functions
+ * from Frenkel-Smit Algorithm 8
+ * 
+ * Mode 0: Initialize
+ * Mode 1: Calculate
+ * Mode 2: Save
+ * dtime = Time diff. between the measurements
+ */
+void diffusion(int mode, int dtime)
+{
+    static int count;
+    int i,j;
+    
+    if(mode==0) //initialize
+    {
+        count=0;
+        vacf[0]=0.0;
+        vacf[1]=0.0;
+        vacf[2]=0.0;
+        r2t[0]=0.0;
+        r2t[1]=0.0;
+        r2t[2]=0.0;
+        eacf[0]=0.0;
+        eacf[1]=0.0;
+        eacf[2]=0.0;
+        
+        xinit = (double *)malloc(Npart*sizeof(double));
+        yinit = (double *)malloc(Npart*sizeof(double));
+        zinit = (double *)malloc(Npart*sizeof(double));
+        vx0 = (double *)malloc(Npart*sizeof(double));
+        vy0 = (double *)malloc(Npart*sizeof(double));
+        vz0 = (double *)malloc(Npart*sizeof(double));
+        ex0 = (double *)malloc(Npart*sizeof(double));
+        ey0 = (double *)malloc(Npart*sizeof(double));
+        ez0 = (double *)malloc(Npart*sizeof(double));
+        
+        for(i=0; i<Npart; i++)
+        {
+            xinit[i]=particle[i].x;
+            yinit[i]=particle[i].y;
+            zinit[i]=particle[i].z;
+            vx0[i]=particle[i].vx;
+            vy0[i]=particle[i].vy;
+            vz0[i]=particle[i].vz;
+            
+            ex0[i]=particle[i].ex;
+            ey0[i]=particle[i].ey;
+            ez0[i]=particle[i].ez;
+        }
+    }
+    else if(mode==1)    //Sample
+    {
+        count++;
 
+        for(i=0; i<Npart; i++)
+        {
+            vacf[0] += particle[i].vx*vx0[i];
+            vacf[1] += particle[i].vy*vy0[i];
+            vacf[2] += particle[i].vz*vz0[i];
+            
+            r2t[0] += sqr(particle[i].x - xinit[i]);
+            r2t[1] += sqr(particle[i].y - yinit[i]);
+            r2t[2] += sqr(particle[i].z - zinit[i]);
+            
+            eacf[0] += particle[i].ex*ex0[i];
+            eacf[1] += particle[i].ey*ey0[i];
+            eacf[2] += particle[i].ez*ez0[i];
+        }
+    }
+    else if(mode==2)
+    {
+        fprintf(diff_file,"%8d %5d %+0.3e %+0.3e %+0.3e ",step, count,r2t[0]/(Npart*count*dtime),r2t[1]/(Npart*count*dtime),r2t[2]/(Npart*count*dtime));
+        fprintf(diff_file,"%+0.3e %+0.3e %+0.3e ",vacf[0]/(Npart*count*dtime),vacf[1]/(Npart*count*dtime),vacf[2]/(Npart*count*dtime));
+        fprintf(diff_file,"%+0.3e %+0.3e %+0.3e\n",eacf[0]/(Npart*count*dtime),eacf[1]/(Npart*count*dtime),eacf[2]/(Npart*count*dtime));
+    }
+    
+}
 
 
 

@@ -104,3 +104,4 @@ box_t       box;
 
 FILE *test_file;
 FILE *snap_file;
+FILE *diff_file;

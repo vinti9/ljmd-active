@@ -162,6 +162,7 @@ void initialize()
         
     //Initialize RDF parameters
     rdf(0);
+    diffusion(0,0);
   
 }
 
@@ -823,6 +824,8 @@ void sample()
         if(step%1000 == 0)
         {
             //ngr +=1;
+            rdf(1);
+            diffusion(1,1000);
         }
 #endif
     
@@ -1038,6 +1041,7 @@ void main()
     
     snap_file = fopen("snap.dat","a");
     conf_file = fopen("pos.xyz","a");
+    diff_file = fopen("diff.dat","w");
 
     printf("Begin Initialization\n");
     initialize();
@@ -1097,6 +1101,7 @@ void main()
             write_pos(0);       //Print last configuration for continuing the simulation run
             rdf(2);             //Print RDF values
             eval_vprop();
+            diffusion(2,1000);             //Print diff_coeff values
         }
         if(step%100000 ==0)  //every 10^5 steps
         {
@@ -1114,6 +1119,7 @@ void main()
     fclose(out_file);
     fclose(snap_file);
     fclose(conf_file);
+    fclose(diff_file);
     
     //Compute total time taken for the simulation run
     time_diff = clock() - start;
